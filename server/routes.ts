@@ -382,12 +382,17 @@ Return only valid JSON, no markdown.`,
     }
   });
 
-  // PATCH /api/checklist/:id - Update item text
+  // PATCH /api/checklist/:id - Update item text and/or checked state
   app.patch("/api/checklist/:id", async (req, res) => {
     try {
-      const updatedItem = await storage.updateChecklistItem(req.params.id, {
-        text: req.body.text,
-      });
+      const updateData: { text?: string; isChecked?: boolean } = {};
+      if (req.body.text !== undefined) {
+        updateData.text = req.body.text;
+      }
+      if (req.body.isChecked !== undefined) {
+        updateData.isChecked = req.body.isChecked;
+      }
+      const updatedItem = await storage.updateChecklistItem(req.params.id, updateData);
       if (!updatedItem) {
         return res.status(404).json({ error: "Checklist item not found" });
       }

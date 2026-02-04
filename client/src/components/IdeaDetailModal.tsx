@@ -43,6 +43,7 @@ interface IdeaDetailModalProps {
   onClose: () => void;
   onSkip: (ideaId: string) => void;
   onStartTask: (ideaId: string) => void;
+  onComplete: (ideaId: string) => void;
   onChecklistUpdate: (
     ideaId: string,
     items: ChecklistItemData[]
@@ -55,6 +56,7 @@ export function IdeaDetailModal({
   onClose,
   onSkip,
   onStartTask,
+  onComplete,
   onChecklistUpdate,
 }: IdeaDetailModalProps) {
   const [localItems, setLocalItems] = useState<ChecklistItemData[]>([]);
@@ -162,32 +164,37 @@ export function IdeaDetailModal({
 
   if (!idea) return null;
 
-  return (
-    <>
-      <Confetti
-        trigger={showConfetti}
-        duration={3000}
-        onComplete={handleConfettiComplete}
-      />
+  const handleComplete = () => {
+    if (idea) {
+      onComplete(idea.id);
+      onClose();
+    }
+  };
 
-      <AnimatePresence>
-        {open && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-black/60"
-              onClick={onClose}
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/60"
+            onClick={onClose}
+          />
+          <motion.div
+            initial={{ opacity: 0, y: "100%" }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="fixed inset-x-0 bottom-0 z-50 max-h-[90vh] overflow-y-auto rounded-t-3xl bg-background"
+            data-testid="idea-detail-modal"
+          >
+            <Confetti
+              trigger={showConfetti}
+              duration={3000}
+              onComplete={handleConfettiComplete}
             />
-            <motion.div
-              initial={{ opacity: 0, y: "100%" }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed inset-x-0 bottom-0 z-50 max-h-[90vh] overflow-y-auto rounded-t-3xl bg-background"
-              data-testid="idea-detail-modal"
-            >
               <div className="sticky top-0 z-10 flex justify-end p-3 bg-background">
                 <button
                   onClick={onClose}
@@ -345,7 +352,7 @@ export function IdeaDetailModal({
 
                   {allChecked && (
                     <Button
-                      onClick={onClose}
+                      onClick={handleComplete}
                       className="w-full h-12 text-base bg-primary"
                       data-testid="complete-idea-button"
                     >
@@ -369,6 +376,5 @@ export function IdeaDetailModal({
           </>
         )}
       </AnimatePresence>
-    </>
   );
 }

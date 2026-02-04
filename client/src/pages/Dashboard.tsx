@@ -107,14 +107,10 @@ export default function Dashboard() {
           if (item.id.startsWith("new-")) {
             return apiRequest("POST", `/api/ideas/${ideaId}/checklist`, { text: item.text });
           } else {
-            await apiRequest("PATCH", `/api/checklist/${item.id}`, { text: item.text });
-            if (item.isChecked) {
-              const checkItem = await fetch(`/api/checklist/${item.id}`);
-              const checkData = await checkItem.json();
-              if (!checkData.isChecked) {
-                await apiRequest("PATCH", `/api/checklist/${item.id}/toggle`, {});
-              }
-            }
+            await apiRequest("PATCH", `/api/checklist/${item.id}`, { 
+              text: item.text,
+              isChecked: item.isChecked 
+            });
           }
         })
       );
@@ -464,6 +460,7 @@ export default function Dashboard() {
         }}
         onSkip={handleSkipIdea}
         onStartTask={handleStartTask}
+        onComplete={(ideaId) => completeIdeaMutation.mutate(ideaId)}
         onChecklistUpdate={handleChecklistUpdate}
       />
 
