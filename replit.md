@@ -10,6 +10,12 @@ EDIM (Entertainment Data to Idea Management) is a gamified content creation assi
 - **Session Storage**: PostgreSQL with connect-pg-simple
 - **User Data**: Each user has separate ideas, analytics imports, and tier progress
 
+### Admin System
+- **Primary Admin**: paul.ekpo9@gmail.com (auto-set on login)
+- **Admin Dashboard**: /admin route with stats and user management
+- **Features**: View all users, toggle admin status, see platform statistics
+- **Access Control**: Non-admins see "Access Denied" page, admin nav link only visible to admins
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

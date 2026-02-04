@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Lightbulb, Trophy, ArrowLeft, Shield, ShieldCheck } from "lucide-react";
-import { Link } from "wouter";
+import { Users, Lightbulb, Trophy, ArrowLeft, Shield, ShieldCheck, Lock } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import type { User } from "@shared/models/auth";
 
 interface AdminStats {
@@ -19,13 +19,20 @@ interface AdminStats {
 
 export default function AdminDashboard() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
-  const { data: stats, isLoading: statsLoading } = useQuery<AdminStats>({
+  const { data: adminCheck, isLoading: adminCheckLoading } = useQuery<{ isAdmin: boolean }>({
+    queryKey: ["/api/admin/check"],
+  });
+
+  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery<AdminStats>({
     queryKey: ["/api/admin/stats"],
+    enabled: adminCheck?.isAdmin === true,
   });
 
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
+    enabled: adminCheck?.isAdmin === true,
   });
 
   const toggleAdminMutation = useMutation({
@@ -66,6 +73,33 @@ export default function AdminDashboard() {
     const last = lastName?.[0] || "";
     return (first + last).toUpperCase() || "U";
   };
+
+  if (adminCheckLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (!adminCheck?.isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md mx-4" data-testid="access-denied">
+          <CardContent className="pt-6 text-center">
+            <Lock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h2 className="text-xl font-bold mb-2">Access Denied</h2>
+            <p className="text-muted-foreground mb-4">
+              You don't have permission to access the admin dashboard.
+            </p>
+            <Link href="/">
+              <Button data-testid="button-go-home">Go to Dashboard</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (statsLoading || usersLoading) {
     return (

@@ -53,6 +53,16 @@ export interface IStorage {
   createNotification(data: InsertNotification): Promise<Notification>;
   getNotifications(userId: string, unreadOnly?: boolean): Promise<Notification[]>;
   markNotificationRead(id: string): Promise<void>;
+
+  // Admin methods
+  getAllUsers(): Promise<User[]>;
+  setUserAdmin(userId: string, isAdmin: boolean): Promise<User | undefined>;
+  getAdminStats(): Promise<{
+    totalUsers: number;
+    totalIdeas: number;
+    totalCompletedIdeas: number;
+    usersByTier: { tier: string; count: number }[];
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
