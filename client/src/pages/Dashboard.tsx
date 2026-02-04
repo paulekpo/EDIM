@@ -11,8 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Sparkles, Upload, Trophy, RefreshCw, CheckCircle, Target, Lightbulb, Rocket, ArrowUp, BarChart3 } from "lucide-react";
+import { Sparkles, Upload, Trophy, RefreshCw, CheckCircle, Target, Lightbulb, Rocket, ArrowUp, BarChart3, LogOut, User } from "lucide-react";
 
 interface ChecklistItemData {
   id: string;
@@ -39,6 +40,7 @@ interface ProgressData {
 
 export default function Dashboard() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<IdeaData | null>(null);
   const [ideaModalOpen, setIdeaModalOpen] = useState(false);
@@ -290,6 +292,27 @@ export default function Dashboard() {
                 <span className="hidden sm:inline">Completed</span>
               </Button>
             </Link>
+            {user && (
+              <div className="flex items-center gap-2">
+                {user.profileImageUrl ? (
+                  <img 
+                    src={user.profileImageUrl} 
+                    alt="Profile" 
+                    className="w-8 h-8 rounded-full"
+                    data-testid="user-avatar"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="w-4 h-4" />
+                  </div>
+                )}
+                <a href="/api/logout">
+                  <Button variant="ghost" size="sm" data-testid="button-logout">
+                    <LogOut className="w-4 h-4" />
+                  </Button>
+                </a>
+              </div>
+            )}
           </nav>
         </div>
       </header>

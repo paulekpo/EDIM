@@ -3,24 +3,9 @@ import { pgTable, text, varchar, integer, timestamp, boolean, jsonb } from "driz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Users table
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  currentTier: text("current_tier").notNull().default("amateur"),
-  tierProgress: integer("tier_progress").notNull().default(0),
-  lastActiveAt: timestamp("last_active_at"),
-  createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-});
-
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+// Export auth models (users and sessions tables)
+export * from "./models/auth";
+import { users } from "./models/auth";
 
 // Analytics Imports table
 export const analyticsImports = pgTable("analytics_imports", {

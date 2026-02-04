@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -15,8 +15,11 @@ import { z } from "zod";
 import OpenAI from "openai";
 import { generateIdeas, checkDuplicates, type AnalyticsData } from "./services/aiService";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 
-const DEMO_USER_ID = "demo-user-123";
+function getUserId(req: any): string {
+  return req.user?.claims?.sub;
+}
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -38,29 +41,13 @@ const TIER_THRESHOLDS: Record<string, number> = {
 
 const TIER_ORDER = ["amateur", "professional", "expert"];
 
-async function ensureDemoUser() {
-  try {
-    const user = await storage.getUser(DEMO_USER_ID);
-    if (!user) {
-      await db.insert(users).values({
-        id: DEMO_USER_ID,
-        username: "demo_user",
-        password: "demo_pass",
-        currentTier: "amateur",
-        tierProgress: 0,
-      }).onConflictDoNothing();
-    }
-  } catch (error) {
-    console.error("Error ensuring demo user:", error);
-  }
-}
-
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Ensure demo user exists on startup
-  await ensureDemoUser();
+  // Setup authentication BEFORE other routes
+  await setupAuth(app);
+  registerAuthRoutes(app);
 
   // Register object storage routes for file uploads
   registerObjectStorageRoutes(app);
@@ -70,8 +57,9 @@ export async function registerRoutes(
   // ============ Analytics Endpoints ============
 
   // POST /api/analytics/upload - Process uploaded screenshot for OCR
-  app.post("/api/analytics/upload", async (req, res) => {
+  app.post("/api/analytics/upload", isAuthenticated, async (req, res) => {
     try {
+      const userId = getUserId(req);
       const { objectPath } = req.body;
 
       if (!objectPath) {
@@ -130,13 +118,13 @@ Return only valid JSON, no markdown.`,
       }
 
       const analyticsImport = await storage.createAnalyticsImport({
-        userId: DEMO_USER_ID,
+        userId,
         trafficSources: parsedData.trafficSources || {},
         searchQueries: parsedData.searchQueries || [],
         rawImageUrl: imageBase64.substring(0, 100),
       });
 
-      await storage.updateUserActivity(DEMO_USER_ID);
+      await storage.updateUserActivity(userId);
 
       res.status(201).json(analyticsImport);
     } catch (error) {
@@ -146,15 +134,16 @@ Return only valid JSON, no markdown.`,
   });
 
   // POST /api/analytics/manual - Manual analytics entry
-  app.post("/api/analytics/manual", async (req, res) => {
+  app.post("/api/analytics/manual", isAuthenticated, async (req, res) => {
     try {
+      const userId = getUserId(req);
       const validatedData = insertAnalyticsImportSchema.parse({
-        userId: DEMO_USER_ID,
+        userId,
         ...req.body,
       });
 
       const analyticsImport = await storage.createAnalyticsImport(validatedData);
-      await storage.updateUserActivity(DEMO_USER_ID);
+      await storage.updateUserActivity(userId);
 
       res.status(201).json(analyticsImport);
     } catch (error) {
@@ -167,9 +156,10 @@ Return only valid JSON, no markdown.`,
   });
 
   // GET /api/analytics/exists - Check if any analytics imports exist
-  app.get("/api/analytics/exists", async (req, res) => {
+  app.get("/api/analytics/exists", isAuthenticated, async (req, res) => {
     try {
-      const hasAnalytics = await storage.hasAnalyticsImports(DEMO_USER_ID);
+      const userId = getUserId(req);
+      const hasAnalytics = await storage.hasAnalyticsImports(userId);
       res.json({ hasAnalytics });
     } catch (error) {
       console.error("Check analytics error:", error);
@@ -194,8 +184,9 @@ Return only valid JSON, no markdown.`,
   // ============ Ideas Endpoints ============
 
   // POST /api/ideas/generate - Generate ideas from analytics
-  app.post("/api/ideas/generate", async (req, res) => {
+  app.post("/api/ideas/generate", isAuthenticated, async (req, res) => {
     try {
+      const userId = getUserId(req);
       const { analyticsImportId } = req.body;
 
       let analyticsDataForAI: AnalyticsData = {
@@ -218,7 +209,7 @@ Return only valid JSON, no markdown.`,
         }
       }
 
-      const existingIdeas = await storage.getIdeasByUser(DEMO_USER_ID);
+      const existingIdeas = await storage.getIdeasByUser(userId);
       const previousTitles = existingIdeas.map((idea) => idea.title);
 
       const generatedIdeas = await generateIdeas(analyticsDataForAI, previousTitles);
@@ -228,7 +219,7 @@ Return only valid JSON, no markdown.`,
       const createdIdeas = await Promise.all(
         uniqueIdeas.map(async (idea, index) => {
           const newIdea = await storage.createIdea({
-            userId: DEMO_USER_ID,
+            userId,
             analyticsImportId: analyticsImportId || null,
             title: idea.title,
             rationale: idea.rationale,
@@ -256,7 +247,7 @@ Return only valid JSON, no markdown.`,
         })
       );
 
-      await storage.updateUserActivity(DEMO_USER_ID);
+      await storage.updateUserActivity(userId);
 
       res.status(201).json(createdIdeas);
     } catch (error) {
@@ -266,12 +257,13 @@ Return only valid JSON, no markdown.`,
   });
 
   // GET /api/ideas - Get all active ideas for user
-  app.get("/api/ideas", async (req, res) => {
+  app.get("/api/ideas", isAuthenticated, async (req, res) => {
     try {
+      const userId = getUserId(req);
       const status = req.query.status as string | undefined;
       const activeIdeas = status
-        ? await storage.getIdeasByUser(DEMO_USER_ID, status)
-        : await storage.getActiveIdeas(DEMO_USER_ID);
+        ? await storage.getIdeasByUser(userId, status)
+        : await storage.getActiveIdeas(userId);
 
       const ideasWithChecklist = await Promise.all(
         activeIdeas.map(async (idea) => {
@@ -332,15 +324,16 @@ Return only valid JSON, no markdown.`,
   });
 
   // PATCH /api/ideas/:id - Update idea
-  app.patch("/api/ideas/:id", async (req, res) => {
+  app.patch("/api/ideas/:id", isAuthenticated, async (req, res) => {
     try {
+      const userId = getUserId(req);
       const idea = await storage.getIdea(req.params.id);
       if (!idea) {
         return res.status(404).json({ error: "Idea not found" });
       }
 
       const updatedIdea = await storage.updateIdea(req.params.id, req.body);
-      await storage.updateUserActivity(DEMO_USER_ID);
+      await storage.updateUserActivity(userId);
 
       res.json(updatedIdea);
     } catch (error) {
@@ -415,8 +408,9 @@ Return only valid JSON, no markdown.`,
   });
 
   // PATCH /api/checklist/:id/toggle - Toggle checkbox
-  app.patch("/api/checklist/:id/toggle", async (req, res) => {
+  app.patch("/api/checklist/:id/toggle", isAuthenticated, async (req, res) => {
     try {
+      const userId = getUserId(req);
       const updatedItem = await storage.toggleChecklistItem(req.params.id);
       if (!updatedItem) {
         return res.status(404).json({ error: "Checklist item not found" });
@@ -430,13 +424,13 @@ Return only valid JSON, no markdown.`,
           return res.json({ ...updatedItem, ideaCompleted: false });
         }
 
-        const user = await storage.getUser(DEMO_USER_ID);
+        const user = await storage.getUser(userId);
         if (!user) {
           return res.json({ ...updatedItem, ideaCompleted: false });
         }
 
         const currentTier = user.currentTier || "amateur";
-        const completedInTier = await storage.countCompletedIdeasInTier(DEMO_USER_ID, currentTier);
+        const completedInTier = await storage.countCompletedIdeasInTier(userId, currentTier);
 
         await storage.updateIdea(updatedItem.ideaId, {
           status: "completed",
@@ -457,29 +451,29 @@ Return only valid JSON, no markdown.`,
           if (tierIndex < TIER_ORDER.length - 1) {
             newTier = TIER_ORDER[tierIndex + 1];
             tierUp = true;
-            await storage.updateUserTierProgress(DEMO_USER_ID, 0, newTier);
+            await storage.updateUserTierProgress(userId, 0, newTier);
 
             await storage.createNotification({
-              userId: DEMO_USER_ID,
+              userId,
               type: "tier_up",
               title: "Tier Up!",
               message: `Congratulations! You've reached ${newTier} tier!`,
             });
           } else {
-            await storage.updateUserTierProgress(DEMO_USER_ID, 100);
+            await storage.updateUserTierProgress(userId, 100);
           }
         } else {
-          await storage.updateUserTierProgress(DEMO_USER_ID, progress);
+          await storage.updateUserTierProgress(userId, progress);
         }
 
         await storage.createNotification({
-          userId: DEMO_USER_ID,
+          userId,
           type: "idea_completed",
           title: "Idea Completed!",
           message: `You completed "${idea.title}"`,
         });
 
-        await storage.updateUserActivity(DEMO_USER_ID);
+        await storage.updateUserActivity(userId);
 
         return res.json({
           ...updatedItem,
@@ -512,15 +506,16 @@ Return only valid JSON, no markdown.`,
   // ============ Progress Endpoints ============
 
   // GET /api/progress - Get user tier progress
-  app.get("/api/progress", async (req, res) => {
+  app.get("/api/progress", isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser(DEMO_USER_ID);
+      const userId = getUserId(req);
+      const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
 
       const currentTier = user.currentTier || "amateur";
-      const completedInTier = await storage.countCompletedIdeasInTier(DEMO_USER_ID, currentTier);
+      const completedInTier = await storage.countCompletedIdeasInTier(userId, currentTier);
       const threshold = TIER_THRESHOLDS[currentTier] || 5;
       const tierIndex = TIER_ORDER.indexOf(currentTier);
       const nextTier = tierIndex < TIER_ORDER.length - 1 ? TIER_ORDER[tierIndex + 1] : null;
@@ -540,8 +535,9 @@ Return only valid JSON, no markdown.`,
   });
 
   // POST /api/ideas/:id/complete - Trigger auto-complete check (idempotent)
-  app.post("/api/ideas/:id/complete", async (req, res) => {
+  app.post("/api/ideas/:id/complete", isAuthenticated, async (req, res) => {
     try {
+      const userId = getUserId(req);
       const idea = await storage.getIdea(req.params.id);
       if (!idea) {
         return res.status(404).json({ error: "Idea not found" });
@@ -567,13 +563,13 @@ Return only valid JSON, no markdown.`,
         });
       }
 
-      const user = await storage.getUser(DEMO_USER_ID);
+      const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
 
       const currentTier = user.currentTier || "amateur";
-      const completedInTier = await storage.countCompletedIdeasInTier(DEMO_USER_ID, currentTier);
+      const completedInTier = await storage.countCompletedIdeasInTier(userId, currentTier);
 
       await storage.updateIdea(req.params.id, {
         status: "completed",
@@ -594,29 +590,29 @@ Return only valid JSON, no markdown.`,
         if (tierIndex < TIER_ORDER.length - 1) {
           newTier = TIER_ORDER[tierIndex + 1];
           tierUp = true;
-          await storage.updateUserTierProgress(DEMO_USER_ID, 0, newTier);
+          await storage.updateUserTierProgress(userId, 0, newTier);
 
           await storage.createNotification({
-            userId: DEMO_USER_ID,
+            userId,
             type: "tier_up",
             title: "Tier Up!",
             message: `Congratulations! You've reached ${newTier} tier!`,
           });
         } else {
-          await storage.updateUserTierProgress(DEMO_USER_ID, 100);
+          await storage.updateUserTierProgress(userId, 100);
         }
       } else {
-        await storage.updateUserTierProgress(DEMO_USER_ID, progress);
+        await storage.updateUserTierProgress(userId, progress);
       }
 
       await storage.createNotification({
-        userId: DEMO_USER_ID,
+        userId,
         type: "idea_completed",
         title: "Idea Completed!",
         message: `You completed "${idea.title}"`,
       });
 
-      await storage.updateUserActivity(DEMO_USER_ID);
+      await storage.updateUserActivity(userId);
 
       res.json({
         success: true,
@@ -634,10 +630,11 @@ Return only valid JSON, no markdown.`,
   // ============ Notification Endpoints ============
 
   // GET /api/notifications - Get user notifications
-  app.get("/api/notifications", async (req, res) => {
+  app.get("/api/notifications", isAuthenticated, async (req, res) => {
     try {
+      const userId = getUserId(req);
       const unreadOnly = req.query.unread === "true";
-      const notificationsList = await storage.getNotifications(DEMO_USER_ID, unreadOnly);
+      const notificationsList = await storage.getNotifications(userId, unreadOnly);
       res.json(notificationsList);
     } catch (error) {
       console.error("Get notifications error:", error);

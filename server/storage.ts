@@ -7,7 +7,7 @@ import {
   checklistItems,
   notifications,
   type User,
-  type InsertUser,
+  type UpsertUser,
   type AnalyticsImport,
   type InsertAnalyticsImport,
   type Idea,
@@ -21,8 +21,8 @@ import {
 export interface IStorage {
   // User methods
   getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: UpsertUser): Promise<User>;
   updateUserActivity(userId: string): Promise<void>;
   updateUserTierProgress(userId: string, progress: number, tier?: string): Promise<void>;
 
@@ -62,12 +62,12 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createUser(insertUser: UpsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
@@ -75,7 +75,7 @@ export class DatabaseStorage implements IStorage {
   async updateUserActivity(userId: string): Promise<void> {
     await db
       .update(users)
-      .set({ lastActiveAt: new Date() })
+      .set({ updatedAt: new Date() })
       .where(eq(users.id, userId));
   }
 
