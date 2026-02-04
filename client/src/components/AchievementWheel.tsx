@@ -120,7 +120,7 @@ export function AchievementWheel({
             transition={{ delay: 0.9 }}
             data-testid="achievement-videos"
           >
-            {videosCompleted}/{videosRequired} videos
+            {videosCompleted}/{videosRequired} Video Ideas
           </motion.span>
         </div>
       </div>
