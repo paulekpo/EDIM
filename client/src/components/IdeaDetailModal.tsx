@@ -12,7 +12,8 @@ import {
   X,
   TrendingUp,
   Search,
-  CheckSquare
+  CheckSquare,
+  Trash2
 } from "lucide-react";
 
 interface ChecklistItemData {
@@ -87,6 +88,15 @@ export function IdeaDetailModal({
       isChecked: false,
     };
     const updated = [...localItems, newItem];
+    setLocalItems(updated);
+    if (idea) {
+      onChecklistUpdate(idea.id, updated);
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    if (localItems.length <= 1) return;
+    const updated = localItems.filter((item) => item.id !== id);
     setLocalItems(updated);
     if (idea) {
       onChecklistUpdate(idea.id, updated);
@@ -182,14 +192,13 @@ export function IdeaDetailModal({
                     {localItems.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-start gap-3 p-3 rounded-xl bg-muted/50"
+                        className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-transparent hover:border-muted-foreground/20"
                       >
                         <Checkbox
                           checked={item.isChecked}
                           onCheckedChange={(checked) =>
                             handleToggle(item.id, checked as boolean)
                           }
-                          className="mt-0.5"
                           data-testid={`checklist-item-${item.id}`}
                         />
                         <span
@@ -199,6 +208,18 @@ export function IdeaDetailModal({
                         >
                           {item.text}
                         </span>
+                        {localItems.length > 1 && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDelete(item.id)}
+                            className="shrink-0"
+                            data-testid={`delete-checklist-item-${item.id}`}
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Delete
+                          </Button>
+                        )}
                       </div>
                     ))}
                   </div>

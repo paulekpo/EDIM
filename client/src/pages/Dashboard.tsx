@@ -260,15 +260,15 @@ export default function Dashboard() {
       <header className="border-b py-3 px-4 sm:py-4 sm:px-6 bg-gradient-to-r from-purple-600/10 via-pink-500/10 to-orange-500/10">
         <div className="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xl">
+              🧠
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent" data-testid="app-title">
-                EDEM
+                EDIM
               </h1>
               <p className="text-xs sm:text-sm text-muted-foreground" data-testid="app-subtitle">
-                Content Gamification
+                Entertainment Data to Idea Management
               </p>
             </div>
           </div>
@@ -289,7 +289,7 @@ export default function Dashboard() {
             <Card data-testid="ideas-section" className="overflow-hidden">
               <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 space-y-0 pb-4 bg-gradient-to-r from-blue-500/5 to-purple-500/5">
                 <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-                  <Target className="w-5 h-5 text-blue-500" />
+                  <span className="text-xl">🧠</span>
                   Ideas Wheel
                 </CardTitle>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -300,7 +300,7 @@ export default function Dashboard() {
                     className="flex-1 sm:flex-none text-xs sm:text-sm"
                     data-testid="upload-analytics-btn"
                   >
-                    <Upload className="w-4 h-4 mr-1 sm:mr-2" />
+                    <span className="mr-1 sm:mr-2">📊</span>
                     <span className="hidden sm:inline">Upload</span> Analytics
                   </Button>
                   <Button
