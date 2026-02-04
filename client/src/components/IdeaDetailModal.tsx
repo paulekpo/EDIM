@@ -22,12 +22,18 @@ interface ChecklistItemData {
   isChecked: boolean;
 }
 
+interface AnalyticsData {
+  searchQueries: string[];
+  trafficSources: Record<string, number>;
+}
+
 interface IdeaData {
   id: string;
   title: string;
   rationale?: string | null;
   status: string;
   checklistItems: ChecklistItemData[];
+  analyticsData?: AnalyticsData | null;
 }
 
 interface IdeaDetailModalProps {
@@ -165,7 +171,7 @@ export function IdeaDetailModal({
                   </p>
                 </div>
 
-                {idea.rationale && (
+                {(idea.rationale || idea.analyticsData) && (
                   <div className="mb-6 p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
                     <div className="flex items-center gap-2 mb-3">
                       <TrendingUp className="w-4 h-4 text-blue-600" />
@@ -173,9 +179,44 @@ export function IdeaDetailModal({
                         Based on your analytics
                       </span>
                     </div>
-                    <p className="text-sm text-foreground" data-testid="idea-modal-rationale">
-                      {idea.rationale}
-                    </p>
+                    
+                    {idea.analyticsData && idea.analyticsData.trafficSources && Object.keys(idea.analyticsData.trafficSources).length > 0 && (
+                      <div className="mb-3">
+                        <div className="flex items-center gap-2 text-sm text-foreground mb-1">
+                          <TrendingUp className="w-3 h-3 text-green-500" />
+                          <span className="font-medium">Top Traffic Source:</span>
+                          <span>
+                            {Object.entries(idea.analyticsData.trafficSources)
+                              .sort(([,a], [,b]) => (b as number) - (a as number))[0]?.[0] || "For You Page"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {idea.analyticsData && idea.analyticsData.searchQueries && idea.analyticsData.searchQueries.length > 0 && (
+                      <div className="mb-3">
+                        <div className="flex items-center gap-2 text-sm text-foreground mb-2">
+                          <Search className="w-3 h-3 text-purple-500" />
+                          <span className="font-medium">Search queries that brought users:</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {idea.analyticsData.searchQueries.slice(0, 5).map((query, idx) => (
+                            <span 
+                              key={idx}
+                              className="text-xs px-2 py-1 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300"
+                            >
+                              {query}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {idea.rationale && (
+                      <p className="text-sm text-foreground" data-testid="idea-modal-rationale">
+                        {idea.rationale}
+                      </p>
+                    )}
                   </div>
                 )}
 

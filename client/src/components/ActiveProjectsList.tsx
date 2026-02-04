@@ -77,16 +77,16 @@ export function ActiveProjectsList({
                 <Button
                   key={idea.id}
                   variant="outline"
-                  className="w-full justify-start text-left h-auto py-3 px-4"
+                  className="w-full justify-start text-left h-auto py-3 px-4 whitespace-normal"
                   onClick={() => handleSelect(idea.id)}
                   data-testid={`project-item-${idea.id}`}
                 >
-                  <div className="flex items-start gap-3 w-full min-w-0">
+                  <div className="flex items-start gap-3 w-full">
                     <div className="shrink-0 mt-0.5">
                       {getStatusIcon(idea.status)}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{idea.title}</p>
+                    <div className="flex-1">
+                      <p className="font-medium text-wrap break-words">{idea.title}</p>
                       <p className="text-xs text-muted-foreground">
                         {getStatusLabel(idea.status)}
                       </p>

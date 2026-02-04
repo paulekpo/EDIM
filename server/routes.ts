@@ -263,10 +263,26 @@ Return only valid JSON, no markdown.`,
         : await storage.getActiveIdeas(DEMO_USER_ID);
 
       const ideasWithChecklist = await Promise.all(
-        activeIdeas.map(async (idea) => ({
-          ...idea,
-          checklistItems: await storage.getChecklistItems(idea.id),
-        }))
+        activeIdeas.map(async (idea) => {
+          const checklistItems = await storage.getChecklistItems(idea.id);
+          let analyticsData = null;
+          
+          if (idea.analyticsImportId) {
+            const analyticsImport = await storage.getAnalyticsImport(idea.analyticsImportId);
+            if (analyticsImport) {
+              analyticsData = {
+                searchQueries: analyticsImport.searchQueries || [],
+                trafficSources: analyticsImport.trafficSources || {},
+              };
+            }
+          }
+          
+          return {
+            ...idea,
+            checklistItems,
+            analyticsData,
+          };
+        })
       );
 
       res.json(ideasWithChecklist);
@@ -285,7 +301,19 @@ Return only valid JSON, no markdown.`,
       }
 
       const checklistItems = await storage.getChecklistItems(idea.id);
-      res.json({ ...idea, checklistItems });
+      let analyticsData = null;
+      
+      if (idea.analyticsImportId) {
+        const analyticsImport = await storage.getAnalyticsImport(idea.analyticsImportId);
+        if (analyticsImport) {
+          analyticsData = {
+            searchQueries: analyticsImport.searchQueries || [],
+            trafficSources: analyticsImport.trafficSources || {},
+          };
+        }
+      }
+      
+      res.json({ ...idea, checklistItems, analyticsData });
     } catch (error) {
       console.error("Get idea error:", error);
       res.status(500).json({ error: "Failed to get idea" });
