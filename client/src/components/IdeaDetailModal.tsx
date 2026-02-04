@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ChecklistItem } from "./ChecklistItem";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Confetti } from "./Confetti";
-import { SkipForward, Plus, Lightbulb, Play, PartyPopper } from "lucide-react";
+import { 
+  SkipForward, 
+  Plus, 
+  Lightbulb, 
+  Play, 
+  PartyPopper, 
+  X,
+  TrendingUp,
+  Search,
+  CheckSquare
+} from "lucide-react";
 
 interface ChecklistItemData {
   id: string;
@@ -78,25 +80,6 @@ export function IdeaDetailModal({
     }
   };
 
-  const handleEdit = (id: string, text: string) => {
-    const updated = localItems.map((item) =>
-      item.id === id ? { ...item, text } : item
-    );
-    setLocalItems(updated);
-    if (idea) {
-      onChecklistUpdate(idea.id, updated);
-    }
-  };
-
-  const handleDelete = (id: string) => {
-    if (localItems.length <= 1) return;
-    const updated = localItems.filter((item) => item.id !== id);
-    setLocalItems(updated);
-    if (idea) {
-      onChecklistUpdate(idea.id, updated);
-    }
-  };
-
   const handleAddItem = () => {
     const newItem: ChecklistItemData = {
       id: `new-${Date.now()}`,
@@ -131,118 +114,145 @@ export function IdeaDetailModal({
         onComplete={handleConfettiComplete}
       />
 
-      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-        <DialogContent
-          className="max-w-md"
-          data-testid="idea-detail-modal"
-        >
-          <DialogHeader>
-            <DialogTitle
-              className="flex items-start gap-2"
-              data-testid="idea-modal-title"
+      <AnimatePresence>
+        {open && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/60"
+              onClick={onClose}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: "100%" }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed inset-x-0 bottom-0 z-50 max-h-[90vh] overflow-y-auto rounded-t-3xl bg-background"
+              data-testid="idea-detail-modal"
             >
-              <Lightbulb className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-              <span>{idea.title}</span>
-            </DialogTitle>
-            {idea.rationale && (
-              <DialogDescription data-testid="idea-modal-rationale">
-                {idea.rationale}
-              </DialogDescription>
-            )}
-          </DialogHeader>
-
-          <div className="py-4">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-medium">
-                Your creation checklist
-              </h4>
-              <span className="text-xs text-muted-foreground">
-                {localItems.filter((i) => i.isChecked).length}/{localItems.length} done
-              </span>
-            </div>
-
-            <div
-              className="space-y-1 max-h-64 overflow-y-auto"
-              data-testid="idea-checklist"
-            >
-              <AnimatePresence mode="popLayout">
-                {localItems.map((item, index) => (
-                  <ChecklistItem
-                    key={item.id}
-                    item={item}
-                    onToggle={handleToggle}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    isLast={localItems.length === 1}
-                  />
-                ))}
-              </AnimatePresence>
-            </div>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleAddItem}
-              className="mt-3 w-full"
-              data-testid="add-checklist-item-button"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add step
-            </Button>
-          </div>
-
-          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-between">
-            <Button
-              variant="outline"
-              onClick={handleSkip}
-              className="w-full sm:w-auto"
-              data-testid="skip-idea-button"
-            >
-              <SkipForward className="w-4 h-4 mr-2" />
-              Skip
-            </Button>
-
-            <AnimatePresence mode="wait">
-              {idea.status === "unstarted" && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  key="start"
-                  className="w-full sm:w-auto"
+              <div className="sticky top-0 z-10 flex justify-end p-3 bg-background">
+                <button
+                  onClick={onClose}
+                  className="p-2 rounded-full bg-muted"
+                  data-testid="close-modal-button"
                 >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="px-6 pb-8">
+                <div className="flex flex-col items-center text-center mb-6">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mb-4">
+                    <Lightbulb className="w-8 h-8 text-purple-500" />
+                  </div>
+                  <h2 className="text-xl font-bold mb-2" data-testid="idea-modal-title">
+                    {idea.title}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Double-tap items to edit · Check to complete
+                  </p>
+                </div>
+
+                {idea.rationale && (
+                  <div className="mb-6 p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className="w-4 h-4 text-blue-600" />
+                      <span className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                        Based on your analytics
+                      </span>
+                    </div>
+                    <p className="text-sm text-foreground" data-testid="idea-modal-rationale">
+                      {idea.rationale}
+                    </p>
+                  </div>
+                )}
+
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <CheckSquare className="w-5 h-5 text-green-500" />
+                    <h3 className="font-semibold">Project Checklist</h3>
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {localItems.filter((i) => i.isChecked).length}/{localItems.length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3" data-testid="idea-checklist">
+                    {localItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-start gap-3 p-3 rounded-xl bg-muted/50"
+                      >
+                        <Checkbox
+                          checked={item.isChecked}
+                          onCheckedChange={(checked) =>
+                            handleToggle(item.id, checked as boolean)
+                          }
+                          className="mt-0.5"
+                          data-testid={`checklist-item-${item.id}`}
+                        />
+                        <span
+                          className={`text-sm flex-1 ${
+                            item.isChecked ? "line-through text-muted-foreground" : ""
+                          }`}
+                        >
+                          {item.text}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
                   <Button
-                    onClick={() => onStartTask(idea.id)}
-                    className="bg-green-600 w-full sm:w-auto"
-                    data-testid="start-task-button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleAddItem}
+                    className="mt-3 w-full"
+                    data-testid="add-checklist-item-button"
                   >
-                    <Play className="w-4 h-4 mr-2" />
-                    Start Task
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add step
                   </Button>
-                </motion.div>
-              )}
-              {allChecked && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  key="done"
-                  className="w-full sm:w-auto"
-                >
+                </div>
+
+                <div className="space-y-3">
+                  {idea.status === "unstarted" && (
+                    <Button
+                      onClick={() => onStartTask(idea.id)}
+                      className="w-full h-12 text-base bg-green-600"
+                      data-testid="start-task-button"
+                    >
+                      <Play className="w-5 h-5 mr-2" />
+                      Start Task
+                    </Button>
+                  )}
+
+                  {allChecked && (
+                    <Button
+                      onClick={onClose}
+                      className="w-full h-12 text-base bg-primary"
+                      data-testid="complete-idea-button"
+                    >
+                      <PartyPopper className="w-5 h-5 mr-2" />
+                      Done!
+                    </Button>
+                  )}
+
                   <Button
-                    onClick={onClose}
-                    className="bg-primary w-full sm:w-auto"
-                    data-testid="complete-idea-button"
+                    variant="outline"
+                    onClick={handleSkip}
+                    className="w-full h-12 text-base"
+                    data-testid="skip-idea-button"
                   >
-                    <PartyPopper className="w-4 h-4 mr-2" />
-                    Done!
+                    <SkipForward className="w-5 h-5 mr-2" />
+                    Skip
                   </Button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </>
   );
 }
