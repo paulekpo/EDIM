@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Confetti } from "./Confetti";
 import { 
   SkipForward, 
@@ -59,13 +60,24 @@ export function IdeaDetailModal({
   const [localItems, setLocalItems] = useState<ChecklistItemData[]>([]);
   const [showConfetti, setShowConfetti] = useState(false);
   const [justCompleted, setJustCompleted] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (idea) {
       setLocalItems(idea.checklistItems);
       setJustCompleted(false);
+      setEditingId(null);
     }
   }, [idea]);
+
+  useEffect(() => {
+    if (editingId && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editingId]);
 
   const allChecked =
     localItems.length > 0 && localItems.every((item) => item.isChecked);
@@ -106,6 +118,34 @@ export function IdeaDetailModal({
     setLocalItems(updated);
     if (idea) {
       onChecklistUpdate(idea.id, updated);
+    }
+  };
+
+  const handleDoubleClick = (item: ChecklistItemData) => {
+    setEditingId(item.id);
+    setEditText(item.text);
+  };
+
+  const handleEditSave = () => {
+    if (!editingId || !editText.trim()) {
+      setEditingId(null);
+      return;
+    }
+    const updated = localItems.map((item) =>
+      item.id === editingId ? { ...item, text: editText.trim() } : item
+    );
+    setLocalItems(updated);
+    if (idea) {
+      onChecklistUpdate(idea.id, updated);
+    }
+    setEditingId(null);
+  };
+
+  const handleEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleEditSave();
+    } else if (e.key === "Escape") {
+      setEditingId(null);
     }
   };
 
@@ -242,14 +282,28 @@ export function IdeaDetailModal({
                           }
                           data-testid={`checklist-item-${item.id}`}
                         />
-                        <span
-                          className={`text-sm flex-1 ${
-                            item.isChecked ? "line-through text-muted-foreground" : ""
-                          }`}
-                        >
-                          {item.text}
-                        </span>
-                        {localItems.length > 1 && (
+                        {editingId === item.id ? (
+                          <Input
+                            ref={inputRef}
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            onBlur={handleEditSave}
+                            onKeyDown={handleEditKeyDown}
+                            className="flex-1 text-sm h-8"
+                            data-testid={`edit-input-${item.id}`}
+                          />
+                        ) : (
+                          <span
+                            className={`text-sm flex-1 cursor-pointer ${
+                              item.isChecked ? "line-through text-muted-foreground" : ""
+                            }`}
+                            onDoubleClick={() => handleDoubleClick(item)}
+                            data-testid={`checklist-text-${item.id}`}
+                          >
+                            {item.text}
+                          </span>
+                        )}
+                        {localItems.length > 1 && editingId !== item.id && (
                           <Button
                             variant="destructive"
                             size="sm"
