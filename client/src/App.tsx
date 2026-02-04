@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import Dashboard from "@/pages/Dashboard";
 import CompletedProjects from "@/pages/CompletedProjects";
 import AdminDashboard from "@/pages/AdminDashboard";
+import ProfilePage from "@/pages/ProfilePage";
 import LandingPage from "@/pages/LandingPage";
 import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,6 +20,7 @@ function AuthenticatedRouter() {
         <Route path="/" component={Dashboard} />
         <Route path="/completed" component={CompletedProjects} />
         <Route path="/admin" component={AdminDashboard} />
+        <Route path="/profile" component={ProfilePage} />
         <Route component={NotFound} />
       </Switch>
     </AnimatePresence>

@@ -307,23 +307,28 @@ export default function Dashboard() {
             )}
             {user && (
               <div className="flex items-center gap-2">
-                {user.profileImageUrl ? (
-                  <img 
-                    src={user.profileImageUrl} 
-                    alt="Profile" 
-                    className="w-8 h-8 rounded-full"
-                    data-testid="user-avatar"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <User className="w-4 h-4" />
-                  </div>
-                )}
-                <a href="/api/logout">
-                  <Button variant="ghost" size="sm" data-testid="button-logout">
-                    <LogOut className="w-4 h-4" />
-                  </Button>
-                </a>
+                <Link href="/profile">
+                  {user.profileImageUrl ? (
+                    <img 
+                      src={user.profileImageUrl} 
+                      alt="Profile" 
+                      className="w-8 h-8 rounded-full cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+                      data-testid="user-avatar"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center cursor-pointer hover:bg-primary/20 transition-colors">
+                      <User className="w-4 h-4" />
+                    </div>
+                  )}
+                </Link>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  data-testid="button-logout"
+                  onClick={() => window.location.href = "/api/logout"}
+                >
+                  <LogOut className="w-4 h-4" />
+                </Button>
               </div>
             )}
           </nav>
