@@ -14,6 +14,7 @@ import {
 import { z } from "zod";
 import OpenAI from "openai";
 import { generateIdeas, checkDuplicates, type AnalyticsData } from "./services/aiService";
+import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
 
 const DEMO_USER_ID = "demo-user-123";
 
@@ -61,16 +62,28 @@ export async function registerRoutes(
   // Ensure demo user exists on startup
   await ensureDemoUser();
 
+  // Register object storage routes for file uploads
+  registerObjectStorageRoutes(app);
+
+  const objectStorageService = new ObjectStorageService();
+
   // ============ Analytics Endpoints ============
 
-  // POST /api/analytics/upload - Upload screenshot for OCR processing
+  // POST /api/analytics/upload - Process uploaded screenshot for OCR
   app.post("/api/analytics/upload", async (req, res) => {
     try {
-      const { imageBase64 } = req.body;
+      const { objectPath } = req.body;
 
-      if (!imageBase64) {
-        return res.status(400).json({ error: "Image data is required" });
+      if (!objectPath) {
+        return res.status(400).json({ error: "Object path is required. Upload image first via /api/uploads/request-url" });
       }
+
+      // Get the image from object storage
+      const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
+      const [imageBuffer] = await objectFile.download();
+      const imageBase64 = imageBuffer.toString("base64");
+      const [metadata] = await objectFile.getMetadata();
+      const contentType = metadata.contentType || "image/png";
 
       const response = await openai.chat.completions.create({
         model: "gpt-5.2",
@@ -100,7 +113,7 @@ Return only valid JSON, no markdown.`,
               },
               {
                 type: "image_url",
-                image_url: { url: `data:image/png;base64,${imageBase64}` },
+                image_url: { url: `data:${contentType};base64,${imageBase64}` },
               },
             ],
           },

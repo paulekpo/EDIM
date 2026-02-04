@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ChecklistItem } from "./ChecklistItem";
 import { Confetti } from "./Confetti";
-import { SkipForward, Plus, Lightbulb } from "lucide-react";
+import { SkipForward, Plus, Lightbulb, Play, PartyPopper } from "lucide-react";
 
 interface ChecklistItemData {
   id: string;
@@ -32,6 +32,7 @@ interface IdeaDetailModalProps {
   open: boolean;
   onClose: () => void;
   onSkip: (ideaId: string) => void;
+  onStartTask: (ideaId: string) => void;
   onChecklistUpdate: (
     ideaId: string,
     items: ChecklistItemData[]
@@ -43,6 +44,7 @@ export function IdeaDetailModal({
   open,
   onClose,
   onSkip,
+  onStartTask,
   onChecklistUpdate,
 }: IdeaDetailModalProps) {
   const [localItems, setLocalItems] = useState<ChecklistItemData[]>([]);
@@ -189,28 +191,48 @@ export function IdeaDetailModal({
             </Button>
           </div>
 
-          <DialogFooter className="flex-row justify-between gap-2 sm:justify-between">
+          <DialogFooter className="flex-row justify-between gap-2 sm:justify-between flex-wrap">
             <Button
               variant="outline"
               onClick={handleSkip}
               data-testid="skip-idea-button"
             >
               <SkipForward className="w-4 h-4 mr-2" />
-              Skip this idea
+              Skip
             </Button>
 
             <AnimatePresence mode="wait">
+              {idea.status === "unstarted" && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  key="start"
+                >
+                  <Button
+                    onClick={() => onStartTask(idea.id)}
+                    className="bg-green-600"
+                    data-testid="start-task-button"
+                  >
+                    <Play className="w-4 h-4 mr-2" />
+                    Start Task
+                  </Button>
+                </motion.div>
+              )}
               {allChecked && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
+                  key="done"
                 >
                   <Button
                     onClick={onClose}
+                    className="bg-primary"
                     data-testid="complete-idea-button"
                   >
-                    Done! On to the next one
+                    <PartyPopper className="w-4 h-4 mr-2" />
+                    Done!
                   </Button>
                 </motion.div>
               )}

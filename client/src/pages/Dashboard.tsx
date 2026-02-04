@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Sparkles, Upload, Trophy, RefreshCw, CheckCircle } from "lucide-react";
+import { Sparkles, Upload, Trophy, RefreshCw, CheckCircle, Target, Lightbulb, Rocket, ArrowUp, BarChart3 } from "lucide-react";
 
 interface ChecklistItemData {
   id: string;
@@ -192,6 +192,39 @@ export default function Dashboard() {
     [skipIdeaMutation]
   );
 
+  const startTaskMutation = useMutation({
+    mutationFn: async (ideaId: string) => {
+      const response = await apiRequest("PATCH", `/api/ideas/${ideaId}`, {
+        status: "in_progress",
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ideas"] });
+      toast({
+        title: "Task Started!",
+        description: "Let's make this video happen!",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to start task. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleStartTask = useCallback(
+    (ideaId: string) => {
+      startTaskMutation.mutate(ideaId);
+      if (selectedIdea) {
+        setSelectedIdea({ ...selectedIdea, status: "in_progress" });
+      }
+    },
+    [startTaskMutation, selectedIdea]
+  );
+
   const handleChecklistUpdate = useCallback(
     async (ideaId: string, items: ChecklistItemData[]) => {
       await updateChecklistMutation.mutateAsync({ ideaId, items });
@@ -222,55 +255,65 @@ export default function Dashboard() {
       className="min-h-screen flex flex-col bg-background"
       data-testid="dashboard-page"
     >
-      <header className="border-b py-4 px-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="text-2xl font-bold" data-testid="app-title">
-              EDEM
-            </h1>
-            <p className="text-sm text-muted-foreground" data-testid="app-subtitle">
-              Content Gamification
-            </p>
+      <header className="border-b py-3 px-4 sm:py-4 sm:px-6 bg-gradient-to-r from-purple-600/10 via-pink-500/10 to-orange-500/10">
+        <div className="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent" data-testid="app-title">
+                EDEM
+              </h1>
+              <p className="text-xs sm:text-sm text-muted-foreground" data-testid="app-subtitle">
+                Content Gamification
+              </p>
+            </div>
           </div>
-          <nav className="flex items-center gap-4">
+          <nav className="flex items-center gap-2 sm:gap-4">
             <Link href="/completed">
-              <Button variant="ghost" data-testid="nav-completed">
-                <Trophy className="w-4 h-4 mr-2" />
-                Completed Projects
+              <Button variant="ghost" size="sm" className="text-xs sm:text-sm" data-testid="nav-completed">
+                <Trophy className="w-4 h-4 mr-1 sm:mr-2 text-yellow-500" />
+                <span className="hidden sm:inline">Completed</span>
               </Button>
             </Link>
           </nav>
         </div>
       </header>
 
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-3 sm:p-6">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card data-testid="ideas-section">
-              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-4">
-                <CardTitle className="text-lg">Ideas Wheel</CardTitle>
-                <div className="flex items-center gap-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <Card data-testid="ideas-section" className="overflow-hidden">
+              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 space-y-0 pb-4 bg-gradient-to-r from-blue-500/5 to-purple-500/5">
+                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                  <Target className="w-5 h-5 text-blue-500" />
+                  Ideas Wheel
+                </CardTitle>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setAnalyticsModalOpen(true)}
+                    className="flex-1 sm:flex-none text-xs sm:text-sm"
                     data-testid="upload-analytics-btn"
                   >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Analytics
+                    <Upload className="w-4 h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Upload</span> Analytics
                   </Button>
                   <Button
                     size="sm"
                     onClick={handleGenerateIdeas}
                     disabled={generateIdeasMutation.isPending}
+                    className="flex-1 sm:flex-none bg-gradient-to-r from-purple-500 to-pink-500 text-xs sm:text-sm"
                     data-testid="generate-ideas-btn"
                   >
                     {generateIdeasMutation.isPending ? (
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      <RefreshCw className="w-4 h-4 mr-1 sm:mr-2 animate-spin" />
                     ) : (
-                      <Sparkles className="w-4 h-4 mr-2" />
+                      <Sparkles className="w-4 h-4 mr-1 sm:mr-2" />
                     )}
-                    Generate Ideas
+                    Generate
                   </Button>
                 </div>
               </CardHeader>
@@ -303,10 +346,10 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card data-testid="achievement-section">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-primary" />
+            <Card data-testid="achievement-section" className="overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-yellow-500/5 to-orange-500/5">
+                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-yellow-500" />
                   Achievement Progress
                 </CardTitle>
               </CardHeader>
@@ -340,37 +383,48 @@ export default function Dashboard() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-6"
+              className="mt-4 sm:mt-6"
             >
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Quick Stats</CardTitle>
+              <Card className="overflow-hidden">
+                <CardHeader className="py-3 bg-gradient-to-r from-green-500/5 to-teal-500/5">
+                  <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-green-500" />
+                    Quick Stats
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center p-4 rounded-md bg-muted">
-                      <p className="text-2xl font-bold" data-testid="stat-active-ideas">
+                <CardContent className="pt-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                    <div className="text-center p-3 sm:p-4 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20">
+                      <p className="text-xl sm:text-2xl font-bold text-blue-600" data-testid="stat-active-ideas">
                         {activeIdeas.length}
                       </p>
-                      <p className="text-sm text-muted-foreground">Active Ideas</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground flex items-center justify-center gap-1">
+                        <Lightbulb className="w-3 h-3" /> Active
+                      </p>
                     </div>
-                    <div className="text-center p-4 rounded-md bg-muted">
-                      <p className="text-2xl font-bold" data-testid="stat-in-progress">
+                    <div className="text-center p-3 sm:p-4 rounded-lg bg-gradient-to-br from-green-500/10 to-green-600/5 border border-green-500/20">
+                      <p className="text-xl sm:text-2xl font-bold text-green-600" data-testid="stat-in-progress">
                         {activeIdeas.filter((i) => i.status === "in_progress").length}
                       </p>
-                      <p className="text-sm text-muted-foreground">In Progress</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground flex items-center justify-center gap-1">
+                        <Rocket className="w-3 h-3" /> In Progress
+                      </p>
                     </div>
-                    <div className="text-center p-4 rounded-md bg-muted">
-                      <p className="text-2xl font-bold" data-testid="stat-completed-tier">
+                    <div className="text-center p-3 sm:p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20">
+                      <p className="text-xl sm:text-2xl font-bold text-purple-600" data-testid="stat-completed-tier">
                         {progress?.completedInTier || 0}
                       </p>
-                      <p className="text-sm text-muted-foreground">Completed This Tier</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground flex items-center justify-center gap-1">
+                        <CheckCircle className="w-3 h-3" /> Done
+                      </p>
                     </div>
-                    <div className="text-center p-4 rounded-md bg-muted">
-                      <p className="text-2xl font-bold" data-testid="stat-to-next-tier">
+                    <div className="text-center p-3 sm:p-4 rounded-lg bg-gradient-to-br from-orange-500/10 to-orange-600/5 border border-orange-500/20">
+                      <p className="text-xl sm:text-2xl font-bold text-orange-600" data-testid="stat-to-next-tier">
                         {progress ? progress.threshold - progress.completedInTier : 0}
                       </p>
-                      <p className="text-sm text-muted-foreground">To Next Tier</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground flex items-center justify-center gap-1">
+                        <ArrowUp className="w-3 h-3" /> To Level Up
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -395,6 +449,7 @@ export default function Dashboard() {
           setSelectedIdea(null);
         }}
         onSkip={handleSkipIdea}
+        onStartTask={handleStartTask}
         onChecklistUpdate={handleChecklistUpdate}
       />
     </motion.div>

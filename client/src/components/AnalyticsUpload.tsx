@@ -134,12 +134,43 @@ export function AnalyticsUpload({ open, onClose, onSubmit, isProcessing }: Analy
     }, 200);
 
     try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
+      // Step 1: Get presigned URL for upload
+      setUploadProgress(10);
+      const urlResponse = await fetch("/api/uploads/request-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: selectedFile.name,
+          size: selectedFile.size,
+          contentType: selectedFile.type,
+        }),
+      });
 
+      if (!urlResponse.ok) {
+        throw new Error("Failed to get upload URL");
+      }
+
+      const { uploadURL, objectPath } = await urlResponse.json();
+      setUploadProgress(30);
+
+      // Step 2: Upload file directly to presigned URL
+      const uploadResult = await fetch(uploadURL, {
+        method: "PUT",
+        body: selectedFile,
+        headers: { "Content-Type": selectedFile.type },
+      });
+
+      if (!uploadResult.ok) {
+        throw new Error("Failed to upload image");
+      }
+
+      setUploadProgress(60);
+
+      // Step 3: Process the uploaded image with OCR
       const response = await fetch("/api/analytics/upload", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ objectPath }),
       });
 
       clearInterval(progressInterval);
@@ -150,7 +181,10 @@ export function AnalyticsUpload({ open, onClose, onSubmit, isProcessing }: Analy
       }
 
       const data = await response.json();
-      onSubmit(data);
+      onSubmit({
+        trafficSources: data.trafficSources || {},
+        searchQueries: data.searchQueries || [],
+      });
       handleClose();
     } catch (error) {
       clearInterval(progressInterval);
