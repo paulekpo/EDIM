@@ -1,6 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Lightbulb, Play, Circle, CheckCircle2, X } from "lucide-react";
 
 interface IdeaData {
@@ -67,8 +66,9 @@ export function ActiveProjectsList({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed inset-x-0 bottom-0 z-50 max-h-[85vh] rounded-t-3xl bg-background"
+            className="fixed inset-x-0 bottom-0 z-50 max-h-[85vh] rounded-t-3xl bg-background overflow-hidden flex flex-col"
             data-testid="active-projects-modal"
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="sticky top-0 z-10 flex justify-end p-3 bg-background rounded-t-3xl">
               <button
@@ -91,8 +91,8 @@ export function ActiveProjectsList({
                 </p>
               </div>
 
-              <ScrollArea className="max-h-[50vh]">
-                <div className="space-y-3 pr-2">
+              <div className="flex-1 overflow-y-auto overscroll-contain">
+                <div className="space-y-3 pr-2 pb-4">
                   {ideas.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">
                       No active projects yet. Generate some ideas to get started!
@@ -121,7 +121,7 @@ export function ActiveProjectsList({
                     ))
                   )}
                 </div>
-              </ScrollArea>
+              </div>
             </div>
           </motion.div>
         </>
