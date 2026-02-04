@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Sparkles, Upload, Trophy, RefreshCw, CheckCircle, Target, Lightbulb, Rocket, ArrowUp, BarChart3, LogOut, User } from "lucide-react";
+import { Sparkles, Upload, Trophy, RefreshCw, CheckCircle, Target, Lightbulb, Rocket, ArrowUp, BarChart3, LogOut, User, ShieldCheck } from "lucide-react";
 
 interface ChecklistItemData {
   id: string;
@@ -59,7 +59,12 @@ export default function Dashboard() {
     queryKey: ["/api/analytics/exists"],
   });
 
+  const { data: adminStatus } = useQuery<{ isAdmin: boolean }>({
+    queryKey: ["/api/admin/check"],
+  });
+
   const hasAnalytics = analyticsStatus?.hasAnalytics ?? false;
+  const isAdmin = adminStatus?.isAdmin ?? false;
 
   const generateIdeasMutation = useMutation({
     mutationFn: async (analyticsImportId?: string) => {
@@ -292,6 +297,14 @@ export default function Dashboard() {
                 <span className="hidden sm:inline">Completed</span>
               </Button>
             </Link>
+            {isAdmin && (
+              <Link href="/admin">
+                <Button variant="ghost" size="sm" className="text-xs sm:text-sm" data-testid="nav-admin">
+                  <ShieldCheck className="w-4 h-4 mr-1 sm:mr-2 text-primary" />
+                  <span className="hidden sm:inline">Admin</span>
+                </Button>
+              </Link>
+            )}
             {user && (
               <div className="flex items-center gap-2">
                 {user.profileImageUrl ? (

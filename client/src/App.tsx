@@ -7,6 +7,7 @@ import { AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import Dashboard from "@/pages/Dashboard";
 import CompletedProjects from "@/pages/CompletedProjects";
+import AdminDashboard from "@/pages/AdminDashboard";
 import LandingPage from "@/pages/LandingPage";
 import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,6 +18,7 @@ function AuthenticatedRouter() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/completed" component={CompletedProjects} />
+        <Route path="/admin" component={AdminDashboard} />
         <Route component={NotFound} />
       </Switch>
     </AnimatePresence>
