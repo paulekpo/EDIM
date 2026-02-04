@@ -2,6 +2,8 @@ import { users, type User, type UpsertUser } from "@shared/models/auth";
 import { db } from "../../db";
 import { eq } from "drizzle-orm";
 
+const ADMIN_EMAILS = ["paul.ekpo9@gmail.com"];
+
 // Interface for auth storage operations
 // (IMPORTANT) These user operations are mandatory for Replit Auth.
 export interface IAuthStorage {
@@ -16,13 +18,19 @@ class AuthStorage implements IAuthStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    const isAdminEmail = userData.email && ADMIN_EMAILS.includes(userData.email.toLowerCase());
+    
     const [user] = await db
       .insert(users)
-      .values(userData)
+      .values({
+        ...userData,
+        isAdmin: isAdminEmail ? true : false,
+      })
       .onConflictDoUpdate({
         target: users.id,
         set: {
           ...userData,
+          isAdmin: isAdminEmail ? true : undefined,
           updatedAt: new Date(),
         },
       })
