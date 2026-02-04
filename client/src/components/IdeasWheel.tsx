@@ -282,7 +282,7 @@ export function IdeasWheel({
         data-testid="spin-wheel-button"
       >
         <Sparkles className="w-4 h-4 mr-2" />
-        {isSpinning ? "Spinning..." : "Spin for Next Video!"}
+        {isSpinning ? "Spinning..." : "Spin for your next video idea"}
       </Button>
     </motion.div>
   );
