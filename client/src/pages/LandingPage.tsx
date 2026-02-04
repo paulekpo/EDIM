@@ -7,9 +7,12 @@ export default function LandingPage() {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <div className="container mx-auto px-4 py-8">
         <header className="flex items-center justify-between mb-16">
-          <div className="flex items-center gap-2">
-            <Brain className="w-7 h-7 text-primary" />
-            <span className="text-xl font-bold">Entertainment Data to Idea Management</span>
+          <div className="flex items-center gap-3">
+            <Brain className="w-8 h-8 text-primary" />
+            <div>
+              <span className="text-xl font-bold block">EDIM</span>
+              <span className="text-xs text-muted-foreground">Entertainment Data to Idea Management</span>
+            </div>
           </div>
           <a href="/api/login">
             <Button data-testid="button-login">Sign In</Button>
