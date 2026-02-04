@@ -133,7 +133,7 @@ export function IdeaDetailModal({
 
       <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
         <DialogContent
-          className="max-w-md"
+          className="w-[calc(100%-2rem)] max-w-md mx-auto"
           data-testid="idea-detail-modal"
         >
           <DialogHeader>
@@ -191,10 +191,11 @@ export function IdeaDetailModal({
             </Button>
           </div>
 
-          <DialogFooter className="flex-row justify-between gap-2 sm:justify-between flex-wrap">
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-between">
             <Button
               variant="outline"
               onClick={handleSkip}
+              className="w-full sm:w-auto"
               data-testid="skip-idea-button"
             >
               <SkipForward className="w-4 h-4 mr-2" />
@@ -208,10 +209,11 @@ export function IdeaDetailModal({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
                   key="start"
+                  className="w-full sm:w-auto"
                 >
                   <Button
                     onClick={() => onStartTask(idea.id)}
-                    className="bg-green-600"
+                    className="bg-green-600 w-full sm:w-auto"
                     data-testid="start-task-button"
                   >
                     <Play className="w-4 h-4 mr-2" />
@@ -225,10 +227,11 @@ export function IdeaDetailModal({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
                   key="done"
+                  className="w-full sm:w-auto"
                 >
                   <Button
                     onClick={onClose}
-                    className="bg-primary"
+                    className="bg-primary w-full sm:w-auto"
                     data-testid="complete-idea-button"
                   >
                     <PartyPopper className="w-4 h-4 mr-2" />
