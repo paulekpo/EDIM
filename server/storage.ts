@@ -271,6 +271,49 @@ export class DatabaseStorage implements IStorage {
       .set({ isRead: true })
       .where(eq(notifications.id, id));
   }
+
+  // Admin methods
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users).orderBy(sql`${users.createdAt} DESC`);
+  }
+
+  async setUserAdmin(userId: string, isAdmin: boolean): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ isAdmin, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async getAdminStats(): Promise<{
+    totalUsers: number;
+    totalIdeas: number;
+    totalCompletedIdeas: number;
+    usersByTier: { tier: string; count: number }[];
+  }> {
+    const [userCount] = await db.select({ count: sql<number>`count(*)` }).from(users);
+    const [ideaCount] = await db.select({ count: sql<number>`count(*)` }).from(ideas);
+    const [completedCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(ideas)
+      .where(eq(ideas.status, "completed"));
+    
+    const tierCounts = await db
+      .select({ 
+        tier: users.currentTier, 
+        count: sql<number>`count(*)` 
+      })
+      .from(users)
+      .groupBy(users.currentTier);
+
+    return {
+      totalUsers: Number(userCount.count),
+      totalIdeas: Number(ideaCount.count),
+      totalCompletedIdeas: Number(completedCount.count),
+      usersByTier: tierCounts.map(t => ({ tier: t.tier, count: Number(t.count) })),
+    };
+  }
 }
 
 export const storage = new DatabaseStorage();

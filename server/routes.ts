@@ -21,6 +21,21 @@ function getUserId(req: any): string {
   return req.user?.claims?.sub;
 }
 
+// Admin middleware - checks if user is authenticated and is an admin
+async function isAdmin(req: Request, res: Response, next: NextFunction) {
+  const userId = getUserId(req);
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  
+  const user = await storage.getUser(userId);
+  if (!user || !user.isAdmin) {
+    return res.status(403).json({ error: "Admin access required" });
+  }
+  
+  next();
+}
+
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
@@ -650,6 +665,59 @@ Return only valid JSON, no markdown.`,
     } catch (error) {
       console.error("Mark notification read error:", error);
       res.status(500).json({ error: "Failed to mark notification as read" });
+    }
+  });
+
+  // ============ Admin Endpoints ============
+
+  // GET /api/admin/stats - Get admin dashboard statistics
+  app.get("/api/admin/stats", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const stats = await storage.getAdminStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Get admin stats error:", error);
+      res.status(500).json({ error: "Failed to get admin stats" });
+    }
+  });
+
+  // GET /api/admin/users - Get all users
+  app.get("/api/admin/users", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const usersList = await storage.getAllUsers();
+      res.json(usersList);
+    } catch (error) {
+      console.error("Get all users error:", error);
+      res.status(500).json({ error: "Failed to get users" });
+    }
+  });
+
+  // PATCH /api/admin/users/:id/admin - Toggle admin status
+  app.patch("/api/admin/users/:id/admin", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { isAdmin: makeAdmin } = req.body;
+      if (typeof makeAdmin !== "boolean") {
+        return res.status(400).json({ error: "isAdmin must be a boolean" });
+      }
+      const user = await storage.setUserAdmin(req.params.id, makeAdmin);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Toggle admin error:", error);
+      res.status(500).json({ error: "Failed to update admin status" });
+    }
+  });
+
+  // GET /api/admin/check - Check if current user is admin
+  app.get("/api/admin/check", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const user = await storage.getUser(userId);
+      res.json({ isAdmin: user?.isAdmin ?? false });
+    } catch (error) {
+      res.json({ isAdmin: false });
     }
   });
 
