@@ -76,10 +76,19 @@ export default {
           border: "var(--sidebar-accent-border)"
         },
         status: {
+          unstarted: "hsl(var(--status-unstarted) / <alpha-value>)",
+          "in-progress": "hsl(var(--status-in-progress) / <alpha-value>)",
+          skipped: "hsl(var(--status-skipped) / <alpha-value>)",
+          completed: "hsl(var(--status-completed) / <alpha-value>)",
           online: "rgb(34 197 94)",
           away: "rgb(245 158 11)",
           busy: "rgb(239 68 68)",
           offline: "rgb(156 163 175)",
+        },
+        tier: {
+          amateur: "hsl(var(--tier-amateur) / <alpha-value>)",
+          professional: "hsl(var(--tier-professional) / <alpha-value>)",
+          expert: "hsl(var(--tier-expert) / <alpha-value>)",
         },
       },
       fontFamily: {
