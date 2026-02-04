@@ -246,7 +246,7 @@ export default function Dashboard() {
     if (!lastAnalyticsImportId) {
       toast({
         title: "No analytics data",
-        description: "Please import your analytics first before generating ideas.",
+        description: "Please import your channel or page analytics first before generating ideas.",
         variant: "destructive",
       });
       return;
@@ -356,7 +356,7 @@ export default function Dashboard() {
                     onSpinBlocked={() => {
                       toast({
                         title: "Import analytics first",
-                        description: "Please import your TikTok analytics before spinning the wheel.",
+                        description: "Please import your channel or page analytics before spinning the wheel.",
                         variant: "destructive",
                       });
                     }}
