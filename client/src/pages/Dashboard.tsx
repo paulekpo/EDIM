@@ -6,6 +6,7 @@ import { IdeasWheel } from "@/components/IdeasWheel";
 import { AchievementWheel } from "@/components/AchievementWheel";
 import { AnalyticsUpload } from "@/components/AnalyticsUpload";
 import { IdeaDetailModal } from "@/components/IdeaDetailModal";
+import { ActiveProjectsList } from "@/components/ActiveProjectsList";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,6 +42,7 @@ export default function Dashboard() {
   const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<IdeaData | null>(null);
   const [ideaModalOpen, setIdeaModalOpen] = useState(false);
+  const [activeProjectsOpen, setActiveProjectsOpen] = useState(false);
   const [lastAnalyticsImportId, setLastAnalyticsImportId] = useState<string | null>(null);
 
   const { data: ideas = [], isLoading: ideasLoading, error: ideasError, refetch: refetchIdeas } = useQuery<IdeaData[]>({
@@ -394,14 +396,18 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent className="pt-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                    <div className="text-center p-3 sm:p-4 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20">
+                    <button
+                      onClick={() => setActiveProjectsOpen(true)}
+                      className="text-center p-3 sm:p-4 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 cursor-pointer transition-all active:scale-95"
+                      data-testid="stat-active-ideas-btn"
+                    >
                       <p className="text-xl sm:text-2xl font-bold text-blue-600" data-testid="stat-active-ideas">
                         {activeIdeas.length}
                       </p>
                       <p className="text-xs sm:text-sm text-muted-foreground flex items-center justify-center gap-1">
                         <Lightbulb className="w-3 h-3" /> Active
                       </p>
-                    </div>
+                    </button>
                     <div className="text-center p-3 sm:p-4 rounded-lg bg-gradient-to-br from-green-500/10 to-green-600/5 border border-green-500/20">
                       <p className="text-xl sm:text-2xl font-bold text-green-600" data-testid="stat-in-progress">
                         {activeIdeas.filter((i) => i.status === "in_progress").length}
@@ -451,6 +457,13 @@ export default function Dashboard() {
         onSkip={handleSkipIdea}
         onStartTask={handleStartTask}
         onChecklistUpdate={handleChecklistUpdate}
+      />
+
+      <ActiveProjectsList
+        ideas={activeIdeas}
+        open={activeProjectsOpen}
+        onClose={() => setActiveProjectsOpen(false)}
+        onSelectIdea={handleSelectIdea}
       />
     </motion.div>
   );

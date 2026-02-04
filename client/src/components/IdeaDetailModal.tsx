@@ -133,7 +133,7 @@ export function IdeaDetailModal({
 
       <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
         <DialogContent
-          className="w-[calc(100%-2rem)] max-w-md mx-auto"
+          className="max-w-md"
           data-testid="idea-detail-modal"
         >
           <DialogHeader>
