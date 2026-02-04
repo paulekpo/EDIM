@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Sparkles, Target, Trophy, BarChart3, ArrowRight } from "lucide-react";
+import { Sparkles, Trophy, BarChart3, ArrowRight, Brain } from "lucide-react";
 
 export default function LandingPage() {
   return (
@@ -8,8 +8,8 @@ export default function LandingPage() {
       <div className="container mx-auto px-4 py-8">
         <header className="flex items-center justify-between mb-16">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">🎡</span>
-            <span className="text-xl font-bold">EDIM</span>
+            <Brain className="w-7 h-7 text-primary" />
+            <span className="text-xl font-bold">Entertainment Data to Idea Management</span>
           </div>
           <a href="/api/login">
             <Button data-testid="button-login">Sign In</Button>
