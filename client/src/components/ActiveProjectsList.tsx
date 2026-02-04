@@ -66,11 +66,10 @@ export function ActiveProjectsList({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed inset-x-0 bottom-0 z-50 max-h-[85vh] rounded-t-3xl bg-background overflow-hidden flex flex-col"
+            className="fixed inset-x-0 bottom-0 z-50 max-h-[90vh] overflow-y-auto rounded-t-3xl bg-background"
             data-testid="active-projects-modal"
-            onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 z-10 flex justify-end p-3 bg-background rounded-t-3xl">
+            <div className="sticky top-0 z-10 flex justify-end p-3 bg-background">
               <button
                 onClick={onClose}
                 className="p-2 rounded-full bg-muted"
@@ -91,36 +90,34 @@ export function ActiveProjectsList({
                 </p>
               </div>
 
-              <div className="flex-1 overflow-y-auto overscroll-contain">
-                <div className="space-y-3 pr-2 pb-4">
-                  {ideas.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">
-                      No active projects yet. Generate some ideas to get started!
-                    </p>
-                  ) : (
-                    ideas.map((idea) => (
-                      <Button
-                        key={idea.id}
-                        variant="outline"
-                        className="w-full justify-start text-left h-auto py-4 px-4 whitespace-normal rounded-xl"
-                        onClick={() => handleSelect(idea.id)}
-                        data-testid={`project-item-${idea.id}`}
-                      >
-                        <div className="flex items-start gap-3 w-full">
-                          <div className="shrink-0 mt-0.5">
-                            {getStatusIcon(idea.status)}
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-wrap break-words">{idea.title}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {getStatusLabel(idea.status)}
-                            </p>
-                          </div>
+              <div className="space-y-3">
+                {ideas.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">
+                    No active projects yet. Generate some ideas to get started!
+                  </p>
+                ) : (
+                  ideas.map((idea) => (
+                    <Button
+                      key={idea.id}
+                      variant="outline"
+                      className="w-full justify-start text-left h-auto py-4 px-4 whitespace-normal rounded-xl"
+                      onClick={() => handleSelect(idea.id)}
+                      data-testid={`project-item-${idea.id}`}
+                    >
+                      <div className="flex items-start gap-3 w-full">
+                        <div className="shrink-0 mt-0.5">
+                          {getStatusIcon(idea.status)}
                         </div>
-                      </Button>
-                    ))
-                  )}
-                </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-wrap break-words">{idea.title}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {getStatusLabel(idea.status)}
+                          </p>
+                        </div>
+                      </div>
+                    </Button>
+                  ))
+                )}
               </div>
             </div>
           </motion.div>
