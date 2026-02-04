@@ -240,8 +240,16 @@ export default function Dashboard() {
   );
 
   const handleGenerateIdeas = useCallback(() => {
-    generateIdeasMutation.mutate(lastAnalyticsImportId || undefined);
-  }, [generateIdeasMutation, lastAnalyticsImportId]);
+    if (!lastAnalyticsImportId) {
+      toast({
+        title: "No analytics data",
+        description: "Please import your analytics first before generating ideas.",
+        variant: "destructive",
+      });
+      return;
+    }
+    generateIdeasMutation.mutate(lastAnalyticsImportId);
+  }, [generateIdeasMutation, lastAnalyticsImportId, toast]);
 
   const activeIdeas = ideas.filter((i) => i.status !== "completed" && i.status !== "skipped");
 
@@ -301,7 +309,7 @@ export default function Dashboard() {
                     data-testid="upload-analytics-btn"
                   >
                     <span className="mr-1 sm:mr-2">📊</span>
-                    <span className="hidden sm:inline">Upload</span> Analytics
+                    <span className="hidden sm:inline">Import your</span> Analytics
                   </Button>
                   <Button
                     size="sm"
