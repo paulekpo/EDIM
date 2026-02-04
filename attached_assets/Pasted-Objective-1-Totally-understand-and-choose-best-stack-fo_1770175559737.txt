@@ -1,0 +1,1219 @@
+Objective: 1. Totally understand and choose best stack for build mapped out before beginning using info in MODEL JSON
+2. prioritize GPT as model where necessary
+
+MODEL JSON: 
+"Instructions in JSON - TikTok Content Gamification App (EDEM) MVP
+json{
+  "project_overview": {
+    "name": "TikTok Content Gamification App",
+    "purpose": "Personal use gamified content creation assistant",
+    "type": "MVP - Minimum Viable Product",
+    "target_user": "Single user (creator building for personal workflow)",
+    "deployment": "Local/personal hosting, no monetization"
+  },
+  
+  "critical_requirements": {
+    "must_haves": [
+      "Ideas Wheel only spins when 2+ ideas are present",
+      "Achievement Wheel is static (does not spin)",
+      "Auto-completion when all checklist items are checked (no manual complete button)",
+      "No deadline pressure or due dates on projects",
+      "Smart notifications that respect user activity",
+      "Color-coded idea states on wheel (white=unstarted, green=in-progress, gray=skipped)",
+      "Completed projects pagination (10 default, expand to 30, then new page)",
+      "Tier-based achievement progression (Amateur=5 videos@20% each, Professional=10@10%, Expert=15@6.67%)"
+    ],
+    
+    "strict_rules": [
+      "NEVER show a 'Mark Complete' button - completion is automatic when all checkboxes are checked",
+      "NEVER show due dates or time pressure indicators on projects",
+      "NEVER send notifications if user was active in last 24 hours",
+      "NEVER allow wheel to spin with only 1 idea remaining",
+      "NEVER allow 0 checklist items (minimum 1 required)",
+      "Ideas Wheel and Achievement Wheel are completely separate components",
+      "Duplicate ideas must be prevented using semantic similarity check"
+    ]
+  },
+  
+  "implementation_phases": {
+    "phase_1_core_foundation": {
+      "priority": "CRITICAL - Build first",
+      "tasks": [
+        {
+          "task": "Set up project structure",
+          "details": {
+            "framework": "React (web) or React Native (mobile)",
+            "state_management": "Redux Toolkit or Zustand",
+            "styling": "Tailwind CSS",
+            "database": "PostgreSQL with Prisma ORM or MongoDB with Mongoose",
+            "backend": "Node.js + Express or Next.js API routes"
+          },
+          "deliverables": [
+            "Initialized repository with folder structure",
+            "Development and production environment configs",
+            "Database connection established",
+            "Basic routing structure"
+          ]
+        },
+        {
+          "task": "Create database schema",
+          "details": {
+            "tables_required": [
+              "users",
+              "analytics_imports",
+              "ideas",
+              "checklist_items",
+              "notifications"
+            ],
+            "relationships": {
+              "users -> analytics_imports": "one-to-many",
+              "analytics_imports -> ideas": "one-to-many",
+              "ideas -> checklist_items": "one-to-many (cascade delete)",
+              "users -> notifications": "one-to-many"
+            }
+          },
+          "validation": [
+            "Run migrations successfully",
+            "Seed database with test data",
+            "Verify foreign key constraints work",
+            "Test cascade deletes on checklist_items when idea is deleted"
+          ]
+        },
+        {
+          "task": "Build authentication system",
+          "details": {
+            "method": "Email/password with JWT",
+            "optional": "Google OAuth for convenience",
+            "security": [
+              "bcrypt password hashing (12 rounds minimum)",
+              "JWT access tokens (15min expiry)",
+              "JWT refresh tokens (7 day expiry)",
+              "HTTP-only cookies for tokens"
+            ]
+          },
+          "endpoints": [
+            "POST /api/auth/signup",
+            "POST /api/auth/login",
+            "POST /api/auth/logout",
+            "POST /api/auth/refresh",
+            "GET /api/auth/me"
+          ],
+          "testing": [
+            "Test signup with valid/invalid emails",
+            "Test login with correct/incorrect passwords",
+            "Test token refresh flow",
+            "Test protected routes require valid token"
+          ]
+        }
+      ]
+    },
+    
+    "phase_2_analytics_import": {
+      "priority": "HIGH - Required for idea generation",
+      "tasks": [
+        {
+          "task": "Build screenshot upload interface",
+          "details": {
+            "ui_components": [
+              "File upload dropzone (drag & drop)",
+              "Camera capture button (mobile only)",
+              "Image preview before processing",
+              "Upload progress indicator"
+            ],
+            "validation": [
+              "Accept only PNG, JPG, JPEG formats",
+              "Maximum file size: 10MB",
+              "Show error for invalid file types/sizes",
+              "Compress images before upload if >5MB"
+            ]
+          },
+          "user_flow": [
+            "User clicks 'Upload Analytics' button",
+            "Modal/page opens with upload options",
+            "User selects file or captures photo",
+            "Preview shows with 'Process' button",
+            "Processing spinner displays",
+            "Success: 'Analytics processed!' message",
+            "Failure: 'Please try again' with error details"
+          ]
+        },
+        {
+          "task": "Implement OCR processing",
+          "details": {
+            "library_options": [
+              "Google Cloud Vision API (recommended for accuracy)",
+              "Tesseract.js (free, lower accuracy)",
+              "AWS Textract (good middle ground)"
+            ],
+            "extraction_targets": [
+              "Traffic source percentages (e.g., 'For You Page: 45%')",
+              "Search queries/terms (e.g., 'quick makeup tips')",
+              "Any visible engagement metrics"
+            ],
+            "data_structure_output": {
+              "traffic_sources": {
+                "For You Page": 45,
+                "Search": 30,
+                "Following": 25
+              },
+              "search_queries": [
+                "quick makeup tips",
+                "beginner skincare",
+                "morning routine"
+              ]
+            }
+          },
+          "error_handling": [
+            "If OCR confidence <70%, prompt manual entry",
+            "If no text detected, show 'Image unclear' error",
+            "Retry logic: allow 3 OCR attempts before manual fallback",
+            "Log OCR failures for debugging"
+          ],
+          "endpoint": "POST /api/analytics/upload",
+          "testing": [
+            "Test with clear screenshot (high quality)",
+            "Test with blurry screenshot",
+            "Test with non-analytics image (should fail gracefully)",
+            "Test with various TikTok analytics layouts",
+            "Verify extracted data matches screenshot content"
+          ]
+        },
+        {
+          "task": "Create manual data entry fallback",
+          "details": {
+            "form_fields": [
+              {
+                "field": "traffic_sources",
+                "type": "dynamic list",
+                "inputs": [
+                  "Source name (text)",
+                  "Percentage (number, 0-100)"
+                ],
+                "validation": "Total percentages must equal 100%"
+              },
+              {
+                "field": "search_queries",
+                "type": "text array",
+                "inputs": "Comma-separated or add one at a time",
+                "validation": "Minimum 1 query required"
+              }
+            ],
+            "save_behavior": "Same data structure as OCR output"
+          },
+          "ui_trigger": "Show 'Enter Manually' button if OCR fails or user preference"
+        }
+      ]
+    },
+    
+    "phase_3_ai_idea_generation": {
+      "priority": "HIGH - Core feature",
+      "tasks": [
+        {
+          "task": "Set up AI API integration",
+          "details": {
+            "provider_options": [
+              {
+                "name": "OpenAI GPT-4",
+                "pros": "Best quality, well-documented",
+                "cons": "Most expensive",
+                "cost": "~$0.03 per 1K tokens"
+              },
+              {
+                "name": "Anthropic Claude",
+                "pros": "Great quality, good pricing",
+                "cons": "Slightly newer API",
+                "cost": "~$0.015 per 1K tokens"
+              },
+              {
+                "name": "Local LLM (Ollama + Llama3)",
+                "pros": "Free, private",
+                "cons": "Requires local setup, slower",
+                "cost": "Free (compute only)"
+              }
+            ],
+            "recommendation": "Anthropic Claude for personal use (good balance)",
+            "setup": [
+              "Store API key in environment variables",
+              "Create AI service module/class",
+              "Implement retry logic (max 3 attempts)",
+              "Set timeout (30 seconds max per request)"
+            ]
+          }
+        },
+        {
+          "task": "Build idea generation prompt system",
+          "details": {
+            "prompt_template": "You are a TikTok content strategist. Based on the following analytics data, generate {count} unique 'How To' video ideas.\n\nAnalytics:\n- Traffic Sources: {traffic_sources}\n- Top Search Queries: {search_queries}\n\nRequirements:\n1. Each idea must be formatted as 'How To [Action] [Specific Outcome]'\n2. Ideas should target the highest traffic sources\n3. Ideas should incorporate the search queries\n4. Each idea must be unique and actionable\n5. Avoid these previously generated ideas: {previous_ideas}\n\nFor each idea, also provide:\n- A brief rationale (why this idea based on the data)\n- 4 suggested checklist items for completing the video\n\nReturn as JSON array with structure:\n{\n  \"ideas\": [\n    {\n      \"title\": \"How To...\",\n      \"rationale\": \"Based on...\",\n      \"checklist\": [\"item1\", \"item2\", \"item3\", \"item4\"]\n    }\n  ]\n}",
+            "variables": {
+              "count": "8-10 ideas",
+              "traffic_sources": "From analytics import",
+              "search_queries": "From analytics import",
+              "previous_ideas": "Query from database (last 50 generated ideas)"
+            },
+            "parsing": [
+              "Parse JSON response from AI",
+              "Validate structure matches expected schema",
+              "If parsing fails, retry with stricter prompt",
+              "Fallback: use regex to extract titles if JSON fails"
+            ]
+          },
+          "duplicate_prevention": {
+            "method": "Semantic similarity check",
+            "implementation": [
+              "Use embeddings API (OpenAI text-embedding-3-small or similar)",
+              "Generate embedding for each new idea title",
+              "Compare with embeddings of previous ideas using cosine similarity",
+              "If similarity > 0.85, reject and regenerate",
+              "Store embeddings in database for future comparisons"
+            ],
+            "fallback": "Simple string matching (Levenshtein distance) if embeddings unavailable"
+          },
+          "endpoint": "POST /api/ideas/generate",
+          "request_body": {
+            "analytics_import_id": "UUID of the analytics import to use"
+          },
+          "testing": [
+            "Generate ideas with valid analytics data",
+            "Verify 8-10 ideas returned",
+            "Verify all titles start with 'How To'",
+            "Verify each idea has 4 checklist items",
+            "Test duplicate detection (try generating twice with same data)",
+            "Test with minimal data (1 source, 1 query)",
+            "Test with rich data (5 sources, 20 queries)"
+          ]
+        },
+        {
+          "task": "Store generated ideas in database",
+          "details": {
+            "on_successful_generation": [
+              "Create records in 'ideas' table",
+              "Create records in 'checklist_items' table for each idea",
+              "Link to analytics_import_id",
+              "Set status='unstarted'",
+              "Set position (0-7 for wheel placement)",
+              "Mark checklist items as is_default=true"
+            ],
+            "data_integrity": [
+              "Use database transactions (all or nothing)",
+              "If checklist insert fails, rollback entire idea",
+              "Set created_at timestamps",
+              "Generate UUIDs for all records"
+            ]
+          }
+        }
+      ]
+    },
+    
+    "phase_4_ideas_wheel": {
+      "priority": "CRITICAL - Main user interaction",
+      "tasks": [
+        {
+          "task": "Build wheel UI component",
+          "details": {
+            "visual_structure": {
+              "type": "SVG-based circular wheel",
+              "segments": "8-10 equal divisions",
+              "center": "Logo or spin indicator",
+              "radius": "60% of container width (responsive)"
+            },
+            "segment_rendering": [
+              "Calculate segment angles: 360 / idea_count",
+              "Each segment displays truncated title (max 30 chars)",
+              "Color-code segments based on status:",
+              {
+                "unstarted": "#FFFFFF (white with border)",
+                "in_progress": "#4CAF50 (green)",
+                "skipped": "#BDBDBD (gray, semi-transparent)"
+              },
+              "Add hover effect: slight scale/glow",
+              "Make segments clickable to open detail view"
+            ],
+            "libraries_recommended": [
+              "React: react-wheel-of-prizes or custom SVG",
+              "Animation: framer-motion or react-spring",
+              "D3.js for advanced wheel rendering (optional)"
+            ]
+          },
+          "states": [
+            {
+              "state": "2+ ideas",
+              "display": "Full wheel with [SPIN] button centered",
+              "behavior": "Button triggers spin animation"
+            },
+            {
+              "state": "1 idea",
+              "display": "Single idea centered, no wheel segments",
+              "behavior": "No spin button, just [View Idea] button"
+            },
+            {
+              "state": "0 ideas",
+              "display": "Empty state with CTA",
+              "behavior": "[Upload New Analytics] button prominent"
+            }
+          ],
+          "testing": [
+            "Render wheel with 8 ideas (all white)",
+            "Render wheel with mixed states (3 white, 2 green, 1 gray)",
+            "Render with 2 ideas (verify spin button shows)",
+            "Render with 1 idea (verify no spin button)",
+            "Test responsive sizing on mobile/tablet/desktop",
+            "Test segment click opens correct idea detail"
+          ]
+        },
+        {
+          "task": "Implement spin animation",
+          "details": {
+            "animation_sequence": [
+              "User clicks [SPIN] button",
+              "Button disables during spin",
+              "Wheel rotates 3-5 full rotations (1080-1800 degrees)",
+              "Easing function: ease-out (fast start, slow end)",
+              "Duration: 3-4 seconds",
+              "Land on random segment",
+              "Brief bounce effect on landing",
+              "Haptic feedback on mobile (vibration)",
+              "Optional: sound effect (can be toggled off)"
+            ],
+            "randomization": {
+              "method": "Weighted random or pure random",
+              "implementation": "const landingIndex = Math.floor(Math.random() * ideaCount);",
+              "rotation_calculation": "const finalRotation = (360 / ideaCount) * landingIndex + (360 * 4) + randomOffset;",
+              "note": "Add small random offset (±15deg) for natural feel"
+            },
+            "post_spin": [
+              "Auto-open detail view of selected idea",
+              "OR: Highlight selected segment, show [View Details] button"
+            ]
+          },
+          "endpoint_integration": "POST /api/ideas/:id/spin (optional - just for tracking)",
+          "testing": [
+            "Spin with 8 ideas, verify lands on random segment",
+            "Spin multiple times, verify different results",
+            "Verify smooth animation (60fps target)",
+            "Test on low-end devices (reduce rotation count if laggy)",
+            "Verify button re-enables after spin completes"
+          ]
+        },
+        {
+          "task": "Build idea detail view modal/page",
+          "details": {
+            "layout": {
+              "header": "Idea title (full, not truncated)",
+              "rationale_section": {
+                "label": "Based on your analytics:",
+                "content": [
+                  "• Top traffic source: {source} ({percentage}%)",
+                  "• Related search: \"{query}\""
+                ]
+              },
+              "checklist_section": {
+                "label": "Project Checklist:",
+                "items": "Interactive checkboxes with text"
+              },
+              "footer_actions": [
+                "[Skip This Idea]",
+                "[Close]"
+              ]
+            },
+            "interactive_checklist": {
+              "checkbox_behavior": [
+                "Click checkbox to toggle checked/unchecked",
+                "First check: Idea status changes to 'in_progress'",
+                "Update database on each check/uncheck",
+                "Track checked_at timestamp"
+              ],
+              "text_editing": [
+                "Click checklist text to edit inline",
+                "Enter key saves, Escape cancels",
+                "Auto-save on blur (click away)",
+                "Update database immediately"
+              ],
+              "add_item": [
+                "[+ Add Item] button at bottom of list",
+                "Creates new blank checkbox",
+                "Auto-focus text for editing",
+                "Save when user types and blurs"
+              ],
+              "delete_item": [
+                "Show trash icon on hover/long-press",
+                "Confirm deletion (simple confirm() dialog)",
+                "Minimum 1 item enforced (disable delete if only 1 remains)"
+              ],
+              "reorder_items": {
+                "method": "Drag and drop (optional for MVP)",
+                "library": "react-beautiful-dnd or @dnd-kit",
+                "fallback": "Up/Down arrow buttons if drag-drop too complex"
+              }
+            }
+          },
+          "state_management": [
+            "Fetch idea details on modal open: GET /api/ideas/:id",
+            "Optimistic UI updates (don't wait for server on checkbox toggle)",
+            "Sync to server in background",
+            "Handle conflicts (rare: if edited on multiple devices)"
+          ],
+          "endpoints": [
+            "GET /api/ideas/:id - Get idea with checklist",
+            "PATCH /api/checklist/:id - Update checklist item text",
+            "PATCH /api/checklist/:id/check - Toggle checkbox",
+            "POST /api/ideas/:id/checklist - Add new item",
+            "DELETE /api/checklist/:id - Delete item",
+            "PATCH /api/ideas/:id - Update idea status (skip)"
+          ],
+          "testing": [
+            "Open detail view, verify all data loads",
+            "Check/uncheck boxes, verify database updates",
+            "Edit text, verify saves correctly",
+            "Add new item, verify appears and saves",
+            "Delete item (when >1 exists), verify removes",
+            "Try to delete last item, verify blocked",
+            "Test skip button, verify idea grays out on wheel"
+          ]
+        },
+        {
+          "task": "Implement auto-completion logic",
+          "details": {
+            "trigger_condition": "All checklist items are checked (is_checked = true)",
+            "implementation": {
+              "check_on_every_checkbox_toggle": [
+                "After updating checkbox in database",
+                "Query: SELECT COUNT(*) WHERE idea_id = :id AND is_checked = false",
+                "If count = 0, trigger auto-complete"
+              ],
+              "auto_complete_sequence": [
+                "Update idea: status='completed', completed_at=NOW()",
+                "Determine tier_completed_in (from user's current_tier)",
+                "Calculate completion_number (count of completed ideas in this tier + 1)",
+                "Trigger confetti animation on frontend",
+                "Wait 2 seconds (let user see celebration)",
+                "Close detail view",
+                "Remove idea from Ideas Wheel (fade out animation)",
+                "Update Achievement Wheel (+20% for Amateur, etc.)",
+                "If Achievement Wheel = 100%, trigger tier completion (see Phase 5)",
+                "Move idea to Completed Projects",
+                "Show toast notification: 'Project complete! ✅'"
+              ]
+            },
+            "database_transaction": [
+              "BEGIN TRANSACTION",
+              "UPDATE ideas SET status='completed', completed_at=NOW(), tier_completed_in=:tier, completion_number=:num WHERE id=:id",
+              "UPDATE users SET tier_progress = tier_progress + :percentage WHERE id=:user_id",
+              "IF tier_progress >= 100 THEN",
+              "  UPDATE users SET current_tier=:next_tier, tier_progress=0",
+              "END IF",
+              "COMMIT"
+            ],
+            "error_handling": [
+              "If database update fails, show error toast",
+              "Don't remove idea from wheel",
+              "Allow user to retry completion"
+            ]
+          },
+          "endpoint": "PATCH /api/ideas/:id/complete (auto-triggered, not user-triggered)",
+          "testing": [
+            "Start idea, check all boxes one by one",
+            "Verify last check triggers auto-complete",
+            "Verify idea disappears from wheel",
+            "Verify Achievement Wheel updates",
+            "Verify appears in Completed Projects",
+            "Test with different tier levels (Amateur, Professional)"
+          ]
+        }
+      ]
+    },
+    
+    "phase_5_achievement_wheel": {
+      "priority": "HIGH - User motivation",
+      "tasks": [
+        {
+          "task": "Build static progress wheel UI",
+          "details": {
+            "visual_type": "SVG circular progress bar (donut chart)",
+            "components": [
+              {
+                "element": "Background circle",
+                "color": "Light gray (#E5E7EB)",
+                "stroke_width": "12px"
+              },
+              {
+                "element": "Progress arc",
+                "color": "Tier-specific gradient",
+                "stroke_width": "12px",
+                "animation": "Smooth fill transition (1 second ease-out)"
+              },
+              {
+                "element": "Center text",
+                "display": [
+                  "Percentage (e.g., '60%') - large font",
+                  "Tier name (e.g., 'Amateur') - medium font",
+                  "Progress fraction (e.g., '3/5 videos') - small font"
+                ]
+              }
+            ],
+            "color_schemes": {
+              "Amateur": {
+                "gradient": "linear-gradient(135deg, #CD7F32 0%, #E6A85C 100%)",
+                "solid": "#CD7F32"
+              },
+              "Professional": {
+                "gradient": "linear-gradient(135deg, #C0C0C0 0%, #E8E8E8 100%)",
+                "solid": "#C0C0C0"
+              },
+              "Expert": {
+                "gradient": "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
+                "solid": "#FFD700"
+              }
+            },
+            "no_spinning": "Static display only - updates fill percentage, never rotates"
+          },
+          "responsive_sizing": [
+            "Mobile: 200px diameter",
+            "Tablet: 250px diameter",
+            "Desktop: 300px diameter"
+          ],
+          "testing": [
+            "Render at 0% (empty circle)",
+            "Render at 50% (half-filled)",
+            "Render at 100% (full circle)",
+            "Test color changes when tier updates",
+            "Test animation smoothness when percentage increases"
+          ]
+        },
+        {
+          "task": "Implement tier progression logic",
+          "details": {
+            "tier_definitions": [
+              {
+                "tier": "Amateur",
+                "videos_required": 5,
+                "percentage_per_video": 20,
+                "color": "Bronze"
+              },
+              {
+                "tier": "Professional",
+                "videos_required": 10,
+                "percentage_per_video": 10,
+                "color": "Silver"
+              },
+              {
+                "tier": "Expert",
+                "videos_required": 15,
+                "percentage_per_video": 6.67,
+                "color": "Gold"
+              }
+            ],
+            "progression_calculation": {
+              "on_idea_completion": [
+                "Get current tier from user record",
+                "Look up percentage_per_video for that tier",
+                "Add to user.tier_progress",
+                "If tier_progress >= 100:",
+                "  Trigger tier completion celebration",
+                "  Move to next tier",
+                "  Reset tier_progress to 0"
+              ],
+              "example_flow": [
+                "User completes video #3 in Amateur tier",
+                "tier_progress: 40% → 60%",
+                "Update Achievement Wheel display",
+                "---",
+                "User completes video #5 in Amateur tier",
+                "tier_progress: 80% → 100%",
+                "Trigger celebration 🎉",
+                "Update tier: Amateur → Professional",
+                "Reset tier_progress: 100% → 0%",
+                "Update Achievement Wheel display"
+              ]
+            }
+          },
+          "database_fields": [
+            "users.current_tier VARCHAR(50)",
+            "users.tier_progress INT (0-100)",
+            "users.total_completed INT (lifetime count)"
+          ],
+          "endpoint": "GET /api/progress - Returns current tier, progress, completed count",
+          "testing": [
+            "Complete 5 videos in Amateur, verify tier upgrades",
+            "Complete 10 videos in Professional, verify tier upgrades",
+            "Verify tier_progress resets to 0 after tier completion",
+            "Verify colors change when tier upgrades"
+          ]
+        },
+        {
+          "task": "Build tier completion celebration",
+          "details": {
+            "trigger": "user.tier_progress reaches 100%",
+            "celebration_sequence": [
+              {
+                "step": 1,
+                "action": "Confetti animation",
+                "duration": "3 seconds",
+                "implementation": "Use canvas-confetti library or react-confetti",
+                "config": {
+                  "particleCount": 150,
+                  "spread": 180,
+                  "origin": { "y": 0.6 },
+                  "colors": "Match tier color scheme"
+                }
+              },
+              {
+                "step": 2,
+                "action": "Show celebration modal",
+                "layout": {
+                  "emoji": "🎉 🎉 🎉",
+                  "title": "{Tier} Tier Complete!",
+                  "message": "You've created {count} videos!",
+                  "sub_message": "Ready for the next level?",
+                  "button": "[Continue to {NextTier}]"
+                },
+                "styling": "Full-screen overlay, centered modal, tier-colored accents"
+              },
+              {
+                "step": 3,
+                "action": "Update UI after user clicks continue",
+                "changes": [
+                  "Achievement Wheel color transitions to next tier",
+                  "Progress resets to 0%",
+                  "Tier label updates",
+                  "Progress fraction updates (0/10 for Professional)"
+                ]
+              },
+              {
+                "step": 4,
+                "action": "Prompt analytics refresh",
+                "message": "Upload fresh analytics to get {NextTier}-level ideas!",
+                "button": "[Upload Analytics]"
+              }
+            ],
+            "sound_effect": "Optional: Play success sound (toggle-able in settings)",
+            "haptic_feedback": "Mobile: Strong vibration pattern"
+          },
+          "testing": [
+            "Trigger by completing 5th Amateur video",
+            "Verify confetti plays for 3 seconds",
+            "Verify modal shows correct tier names",
+            "Verify clicking continue updates all UI elements",
+            "Test on mobile for haptic feedback"
+          ]
+        },
+        {
+          "task": "Add recent completions list",
+          "details": {
+            "display_location": "Below Achievement Wheel on same page",
+            "content": [
+              "Section header: 'Recent Completions'",
+              "List last 3-5 completed ideas",
+              "Each item shows: Title + Completion date"
+            ],
+            "example": "• How To Hook Viewers (Feb 4)\n• Trending Audio Tips (Feb 2)\n• Green Screen Basics (Jan 30)",
+            "click_behavior": "Clicking an item opens completed project detail view",
+            "query": "SELECT * FROM ideas WHERE user_id=:id AND status='completed' ORDER BY completed_at DESC LIMIT 5"
+          },
+          "testing": [
+            "Complete 1 idea, verify appears in list",
+            "Complete 5+ ideas, verify only latest 5 show",
+            "Click list item, verify opens detail view"
+          ]
+        }
+      ]
+    },
+    
+    "phase_6_completed_projects": {
+      "priority": "MEDIUM - Archive feature",
+      "tasks": [
+        {
+          "task": "Build completed projects list view",
+          "details": {
+            "page_structure": {
+              "header": "Completed Projects ({total_count} total)",
+              "list_container": "Scrollable list of project cards",
+              "pagination_controls": "[Show More] and [View Full History] buttons"
+            },
+            "project_card_layout": {
+              "icon": "✅ (checkmark)",
+              "title": "Idea title",
+              "date": "Completed: {formatted_date}",
+              "tier_context": "Tier: {tier} (Video {number}/{total})",
+              "action": "[View Details] button"
+            },
+            "pagination_logic": {
+              "default": "Load last 10 completed projects",
+              "show_more": "Expand to show 30 total (lazy load next 20)",
+              "view_all": "Navigate to new page with infinite scroll"
+            },
+            "queries": [
+              "Default: SELECT * FROM ideas WHERE user_id=:id AND status='completed' ORDER BY completed_at DESC LIMIT 10",
+              "Show More: LIMIT 30",
+              "View All: Paginated query with OFFSET"
+            ]
+          },
+          "endpoint": "GET /api/progress/completed?limit=10&offset=0",
+          "testing": [
+            "Complete 5 projects, verify all 5 show",
+            "Complete 15 projects, verify only 10 show by default",
+            "Click 'Show More', verify expands to show 30",
+            "Complete 50 projects, click 'View All', verify new page loads"
+          ]
+        },
+        {
+          "task": "Build completed project detail view",
+          "details": {
+            "modal_layout": {
+              "header": "✅ {title}",
+              "metadata": [
+                "Completed: {formatted_date}",
+                "Tier: {tier} (Video {number}/{total})"
+              ],
+              "checklist_display": {
+                "label": "Checklist Used:",
+                "items": "All items with checkmarks (read-only)",
+                "note": "☑ prefix instead of interactive checkbox"
+              },
+              "actions": [
+                "[Close]",
+                "[Recreate Idea] (optional for MVP)"
+              ]
+            },
+            "recreate_idea_feature": {
+              "description": "Copies this idea back to Ideas Wheel as new project",
+              "implementation": [
+                "Duplicate idea record with status='unstarted'",
+                "Duplicate all checklist items (unchecked)",
+                "Add to Ideas Wheel",
+                "Show toast: 'Idea added back to wheel!'"
+              ],
+              "use_case": "User wants to remake a video with improvements"
+            }
+          },
+          "endpoint": "GET /api/progress/completed/:id",
+          "testing": [
+            "Open completed project, verify all data displays correctly",
+            "Verify checklist items are read-only (can't edit)",
+            "Test 'Recreate Idea' button (if implemented)",
+            "Verify close button works"
+          ]
+        },
+        {
+          "task": "Implement view all history page",
+          "details": {
+            "page_type": "Separate route: /completed-history",
+            "features": [
+              "Infinite scroll (load 20 more on scroll to bottom)",
+              "Search/filter (optional for MVP)",
+              "Sort options (optional: by date, by tier)"
+            ],
+            "infinite_scroll_implementation": {
+              "library": "react-infinite-scroll-component or Intersection Observer API",
+              "logic": [
+                "Load initial 20 projects",
+                "Detect when user scrolls to bottom 200px",
+                "Load next 20 projects",
+                "Append to list",
+                "Repeat until all loaded",
+                "Show 'No more projects' when done"
+              ]
+            },
+            "endpoint": "GET /api/progress/completed?limit=20&offset={offset}"
+          },
+          "testing": [
+            "Navigate to history page with 50+ completed projects",
+            "Scroll to bottom, verify next 20 load",
+            "Continue scrolling, verify all projects load eventually",
+            "Test with slow network (simulate)",
+            "Verify 'No more projects' shows when all loaded"
+          ]
+        }
+      ]
+    },
+    
+    "phase_7_notifications": {
+      "priority": "MEDIUM - Engagement feature",
+      "tasks": [
+        {
+          "task": "Set up notification infrastructure",
+          "details": {
+            "mobile_push": {
+              "service": "Firebase Cloud Messaging (FCM)",
+              "setup": [
+                "Create Firebase project",
+                "Add FCM SDK to app",
+                "Request notification permissions on app launch",
+                "Store FCM token in database (users.fcm_token)"
+              ]
+            },
+            "web_push": {
+              "service": "Web Push API + Service Worker",
+              "setup": [
+                "Register service worker",
+                "Request notification permission",
+                "Subscribe to push notifications",
+                "Store subscription in database"
+              ]
+            },
+            "fallback": "In-app notifications if push not available"
+          },
+          "database_table": {
+            "table": "notifications",
+            "fields": [
+              "id UUID PRIMARY KEY",
+              "user_id UUID",
+              "type VARCHAR(50)",
+              "title VARCHAR(255)",
+              "body TEXT",
+              "sent_at TIMESTAMP",
+              "opened_at TIMESTAMP",
+              "idea_id UUID (optional - for project-specific notifications)"
+            ]
+          }
+        },
+        {
+          "task": "Build notification scheduler",
+          "details": {
+            "scheduler_type": "Cron job or task queue (e.g., node-cron, Bull queue)",
+            "run_frequency": "Every 6 hours (check which users need notifications)",
+            "notification_types": [
+              {
+                "type": "3_day_checkin",
+                "trigger": "User has in-progress project, no activity for 3 days",
+                "title": "Your video idea is waiting! 🎬",
+                "body": "Hey! Your '{idea_title}' project is ready to continue.",
+                "action": "Opens app to that project"
+              },
+              {
+                "type": "7_day_nudge",
+                "trigger": "User has in-progress project, no activity for 7 days",
+                "title": "No pressure, just checking in 💚",
+                "body": "Still thinking about that {idea_title}? Work on it when you're ready!",
+                "action": "Opens app to Ideas Wheel"
+              },
+              {
+                "type": "milestone_reminder",
+                "trigger": "User is 1 video away from tier completion",
+                "title": "You're so close! 🎉",
+                "body": "Just 1 more video to complete {tier} tier!",
+                "action": "Opens app to Ideas Wheel"
+              },
+              {
+                "type": "weekly_digest",
+                "trigger": "Every Sunday at 6pm user local time",
+                "title": "Your week in review 📊",
+                "body": "{completed_count} projects completed this week. Keep creating!",
+                "action": "Opens app to Achievement Wheel"
+              }
+            ]
+          },
+          "smart_suppression_logic": {
+            "function": "shouldSendNotification(user, notificationType)",
+            "rules": [
+              "IF user.last_app_open within last 24 hours → SUPPRESS",
+              "IF user.last_project_completion within last 48 hours → SUPPRESS",
+              "IF user.last_checklist_interaction within last 24 hours → SUPPRESS",
+              "IF notification sent to user within last 24 hours → SUPPRESS",
+              "IF notifications_sent_this_week >= 2 → SUPPRESS (frequency cap)",
+              "IF current_time within user.quiet_hours → SUPPRESS",
+              "ELSE → Allow notification"
+            ],
+            "implementation": "// Example pseudocode\nconst now = new Date();\nconst last24h = new Date(now - 24*60*60*1000);\nconst last48h = new Date(now - 48*60*60*1000);\n\nif (user.last_app_open > last24h) return false;\nif (user.last_project_completion > last48h) return false;\nif (user.last_checklist_interaction > last24h) return false;\n// ... additional checks\nreturn true;"
+          },
+          "time_optimization": {
+            "default_send_time": "6-8pm user's local timezone",
+            "respect_quiet_hours": "Don't send between 10pm-8am",
+            "future_enhancement": "Learn user's active hours over time"
+          },
+          "endpoint": "POST /api/notifications/send (internal use only)",
+          "testing": [
+            "Manually trigger each notification type",
+            "Verify suppression logic prevents duplicate sends",
+            "Test with user who opened app recently (should suppress)",
+            "Test with user inactive for 3+ days (should send)",
+            "Verify quiet hours respected",
+            "Test timezone handling (if multi-user)"
+          ]
+        },
+        {
+          "task": "Build notification settings page",
+          "details": {
+            "settings_options": [
+              {
+                "setting": "Enable/Disable All",
+                "type": "Toggle switch",
+                "default": true
+              },
+              {
+                "setting": "Frequency",
+                "type": "Radio buttons",
+                "options": ["Daily", "Every 3 days", "Weekly", "Off"],
+                "default": "Every 3 days"
+              },
+              {
+                "setting": "Notification Types",
+                "type": "Checkboxes",
+                "options": [
+                  "Project check-ins",
+                  "Milestone reminders",
+                  "Weekly digest"
+                ],
+                "default": "All checked"
+              },
+              {
+                "setting": "Quiet Hours",
+                "type": "Time range picker",
+                "default": "10:00 PM - 8:00 AM"
+              }
+            ],
+            "save_behavior": "Update users table immediately on change"
+          },
+          "database_fields": [
+            "users.notification_enabled BOOLEAN",
+            "users.notification_frequency VARCHAR(20)",
+            "users.notification_types JSONB",
+            "users.quiet_hours_start TIME",
+            "users.quiet_hours_end TIME"
+          ],
+          "endpoint": "PATCH /api/settings/notifications",
+          "testing": [
+            "Toggle notifications off, verify no notifications sent",
+            "Change frequency to 'Weekly', verify respects setting",
+            "Uncheck 'Weekly digest', verify those stop",
+            "Change quiet hours, verify respected"
+          ]
+        }
+      ]
+    },
+    
+    "phase_8_polish_and_optimization": {
+      "priority": "LOW - After core features work",
+      "tasks": [
+        {
+          "task": "Add loading states and skeletons",
+          "details": {
+            "locations": [
+              "Ideas Wheel loading (spinner in center)",
+              "Idea detail view loading (skeleton checkboxes)",
+              "Achievement Wheel loading",
+              "Completed projects loading"
+            ],
+            "implementation": "Use loading spinners, skeleton screens, or shimmer effects"
+          }
+        },
+        {
+          "task": "Add error boundaries and error handling",
+          "details": {
+            "error_boundary": "Wrap app in React Error Boundary to catch crashes",
+            "error_states": [
+              "Network error (show retry button)",
+              "API error (show error message)",
+              "OCR failure (show manual entry option)",
+              "AI generation failure (show regenerate button)"
+            ]
+          }
+        },
+        {
+          "task": "Implement toast notifications",
+          "details": {
+            "library": "react-hot-toast or react-toastify",
+            "use_cases": [
+              "Success: 'Project completed! ✅'",
+              "Success: 'Analytics uploaded successfully'",
+              "Error: 'Failed to save checklist. Please try again.'",
+              "Info: 'Idea added to wheel'"
+            ]
+          }
+        },
+        {
+          "task": "Add animations and transitions",
+          "details": {
+            "animations": [
+              "Idea fades out when completed",
+              "Achievement Wheel progress fills smoothly",
+              "Modal slide-in/slide-out",
+              "Confetti on milestones",
+              "Page transitions (if multi-page)"
+            ],
+            "library": "framer-motion recommended"
+          }
+        },
+        {
+          "task": "Optimize performance",
+          "details": {
+            "optimizations": [
+              "Lazy load images (completed project screenshots if added later)",
+              "Memoize expensive calculations (React.memo, useMemo)",
+              "Debounce checklist text input saves",
+              "Paginate completed projects (already planned)",
+              "Index database queries (add indexes on user_id, status, completed_at)"
+            ]
+          }
+        },
+        {
+          "task": "Add accessibility features",
+          "details": {
+            "a11y_checklist": [
+              "Keyboard navigation support",
+              "ARIA labels on interactive elements",
+              "Focus indicators visible",
+              "Color contrast meets WCAG AA",
+              "Screen reader friendly"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  
+  "testing_strategy": {
+    "unit_tests": {
+      "framework": "Jest + React Testing Library",
+      "coverage_target": "70% minimum",
+      "critical_functions": [
+        "Auto-completion trigger logic",
+        "Tier progression calculation",
+        "Duplicate idea detection",
+        "Notification suppression logic"
+      ]
+    },
+    "integration_tests": {
+      "framework": "Cypress or Playwright",
+      "critical_flows": [
+        "Full user journey: Signup → Upload analytics → Generate ideas → Complete project",
+        "Tier completion flow",
+        "Notification delivery",
+        "Checklist CRUD operations"
+      ]
+    },
+    "manual_testing": {
+      "test_cases": [
+        "Test on multiple devices (phone, tablet, desktop)",
+        "Test with various screenshot qualities",
+        "Test edge cases (0 ideas, 1 idea, 100 completed projects)",
+        "Test notification timing and suppression",
+        "Test with slow/offline network"
+      ]
+    }
+  },
+  
+  "deployment": {
+    "hosting_options": [
+      {
+        "option": "Vercel (frontend) + Railway/Render (backend)",
+        "pros": "Easy setup, free tier available",
+        "cons": "Separate deployments"
+      },
+      {
+        "option": "Heroku (full-stack)",
+        "pros": "Single deployment",
+        "cons": "More expensive, sleep on free tier"
+      },
+      {
+        "option": "Self-hosted (VPS like DigitalOcean)",
+        "pros": "Full control, cheaper at scale",
+        "cons": "More setup required"
+      }
+    ],
+    "database_hosting": [
+      "Supabase (Postgres, free tier)",
+      "PlanetScale (MySQL, free tier)",
+      "MongoDB Atlas (free tier)",
+      "Railway (Postgres, paid)"
+    ],
+    "environment_variables": [
+      "DATABASE_URL",
+      "JWT_SECRET",
+      "AI_API_KEY (OpenAI/Anthropic)",
+      "OCR_API_KEY (Google Vision/AWS)",
+      "FCM_SERVER_KEY (notifications)",
+      "NODE_ENV (production/development)"
+    ],
+    "deployment_checklist": [
+      "Set up production database",
+      "Run database migrations",
+      "Set environment variables",
+      "Test deployment in staging",
+      "Deploy to production",
+      "Monitor logs for errors",
+      "Set up error tracking (Sentry)"
+    ]
+  },
+  
+  "maintenance": {
+    "monitoring": [
+      "Set up Sentry for error tracking",
+      "Monitor API response times",
+      "Track database query performance",
+      "Monitor notification delivery rate"
+    ],
+    "backups": [
+      "Daily automated database backups",
+      "Weekly full backups to S3/cloud storage",
+      "Test restore process monthly"
+    ],
+    "updates": [
+      "Keep dependencies updated (npm audit)",
+      "Monitor for security vulnerabilities",
+      "Update AI model if provider releases new version"
+    ]
+  },
+  
+  "agent_instructions": {
+    "general_principles": [
+      "Follow the phases in order - don't skip ahead",
+      "Test each feature thoroughly before moving to next phase",
+      "Write clean, commented code",
+      "Use TypeScript for type safety (recommended)",
+      "Follow consistent naming conventions",
+      "Commit frequently with clear messages",
+      "Document any deviations from this spec"
+    ],
+    "when_stuck": [
+      "Re-read the relevant phase requirements",
+      "Check if there's a library that simplifies the task",
+      "Look for similar implementations in open-source projects",
+      "Ask for clarification if requirements are ambiguous",
+      "Test with simple cases first, then add complexity"
+    ],
+    "quality_standards": [
+      "All user-facing text should be clear and friendly",
+      "All animations should be smooth (60fps target)",
+      "All database operations should be transactional where needed",
+      "All API endpoints should have error handling",
+      "All forms should have validation",
+      "All loading states should be handled",
+      "All error states should be user-friendly"
+    ],
+    "code_organization": [
+      "components/ - React components",
+      "pages/ or app/ - Page/route components",
+      "services/ - API calls, AI integration, OCR",
+      "utils/ - Helper functions",
+      "hooks/ - Custom React hooks",
+      "context/ - React context providers",
+      "types/ - TypeScript types/interfaces",
+      "config/ - Configuration files",
+      "db/ - Database schema, migrations"
+    ]
+  },
+  
+  "success_criteria": {
+    "mvp_complete_when": [
+      "User can upload analytics screenshot",
+      "AI generates 8-10 unique ideas",
+      "Ideas Wheel spins (when 2+ ideas) and displays correctly",
+      "User can customize checklists",
+      "Projects auto-complete when all boxes checked",
+      "Achievement Wheel updates on completion",
+      "Tier progression works (Amateur → Professional → Expert)",
+      "Completed projects are archived and viewable",
+      "Notifications send according to smart suppression rules",
+      "All critical flows work end-to-end without errors"
+    ],
+    "quality_benchmarks": [
+      "Page load time < 3 seconds",
+      "Wheel spin animation is smooth",
+      "No visible bugs in happy path flows",
+      "Mobile responsive on common screen sizes",
+      "Works in Chrome, Safari, Firefox (latest versions)"
+    ]
+  }
+}
+
+This JSON provides extremely detailed, step-by-step instructions for building the MVP. An AI agent or developer can follow this sequentially, phase by phase, with clear testing criteria at each step."
