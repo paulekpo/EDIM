@@ -182,10 +182,11 @@ Return only valid JSON, no markdown.`,
     }
   });
 
-  // GET /api/analytics/:id - Get analytics import
-  app.get("/api/analytics/:id", async (req, res) => {
+  // GET /api/analytics/:id - Get analytics import (authenticated with user ownership check)
+  app.get("/api/analytics/:id", isAuthenticated, async (req, res) => {
     try {
-      const analyticsImport = await storage.getAnalyticsImport(req.params.id);
+      const userId = getUserId(req);
+      const analyticsImport = await storage.getAnalyticsImportForUser(req.params.id, userId);
       if (!analyticsImport) {
         return res.status(404).json({ error: "Analytics import not found" });
       }

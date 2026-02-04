@@ -170,6 +170,8 @@ export default function Dashboard() {
         const result = await response.json();
         setLastAnalyticsImportId(result.id);
         setAnalyticsModalOpen(false);
+        // Immediately update the cache to enable Generate button
+        queryClient.setQueryData(["/api/analytics/exists"], { hasAnalytics: true });
         queryClient.invalidateQueries({ queryKey: ["/api/analytics/exists"] });
         toast({
           title: "Analytics Saved",
@@ -358,7 +360,7 @@ export default function Dashboard() {
                   <Button
                     size="sm"
                     onClick={handleGenerateIdeas}
-                    disabled={!hasAnalytics || generateIdeasMutation.isPending}
+                    disabled={(!hasAnalytics && !lastAnalyticsImportId) || generateIdeasMutation.isPending}
                     className="flex-1 sm:flex-none bg-gradient-to-r from-purple-500 to-pink-500 text-xs sm:text-sm"
                     data-testid="generate-ideas-btn"
                   >
