@@ -14,6 +14,8 @@ interface IdeasWheelProps {
   onSpin?: () => void;
   onSelectIdea?: (id: string) => void;
   onUpload?: () => void;
+  onSpinBlocked?: () => void;
+  hasAnalytics?: boolean;
   disabled?: boolean;
 }
 
@@ -83,6 +85,8 @@ export function IdeasWheel({
   onSpin,
   onSelectIdea,
   onUpload,
+  onSpinBlocked,
+  hasAnalytics = false,
   disabled = false,
 }: IdeasWheelProps) {
   const [rotation, setRotation] = useState(0);
@@ -93,7 +97,14 @@ export function IdeasWheel({
   const segmentAngle = segmentCount > 0 ? 360 / segmentCount : 360;
 
   const handleSpin = useCallback(() => {
-    if (disabled || isSpinning || segmentCount < 2) return;
+    if (disabled || isSpinning) return;
+    
+    if (!hasAnalytics) {
+      onSpinBlocked?.();
+      return;
+    }
+    
+    if (segmentCount < 2) return;
 
     setIsSpinning(true);
     const spins = 3 + Math.random() * 3;
@@ -124,6 +135,8 @@ export function IdeasWheel({
     visibleIdeas,
     onSpin,
     onSelectIdea,
+    hasAnalytics,
+    onSpinBlocked,
   ]);
 
   if (ideas.length === 0) {

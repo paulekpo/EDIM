@@ -166,6 +166,17 @@ Return only valid JSON, no markdown.`,
     }
   });
 
+  // GET /api/analytics/exists - Check if any analytics imports exist
+  app.get("/api/analytics/exists", async (req, res) => {
+    try {
+      const hasAnalytics = await storage.hasAnalyticsImports(DEMO_USER_ID);
+      res.json({ hasAnalytics });
+    } catch (error) {
+      console.error("Check analytics error:", error);
+      res.status(500).json({ error: "Failed to check analytics" });
+    }
+  });
+
   // GET /api/analytics/:id - Get analytics import
   app.get("/api/analytics/:id", async (req, res) => {
     try {

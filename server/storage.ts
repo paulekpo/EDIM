@@ -30,6 +30,7 @@ export interface IStorage {
   createAnalyticsImport(data: InsertAnalyticsImport): Promise<AnalyticsImport>;
   getAnalyticsImport(id: string): Promise<AnalyticsImport | undefined>;
   getAnalyticsImportsByUser(userId: string): Promise<AnalyticsImport[]>;
+  hasAnalyticsImports(userId: string): Promise<boolean>;
 
   // Ideas methods
   createIdea(data: InsertIdea): Promise<Idea>;
@@ -106,6 +107,14 @@ export class DatabaseStorage implements IStorage {
       .from(analyticsImports)
       .where(eq(analyticsImports.userId, userId))
       .orderBy(sql`${analyticsImports.createdAt} DESC`);
+  }
+
+  async hasAnalyticsImports(userId: string): Promise<boolean> {
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(analyticsImports)
+      .where(eq(analyticsImports.userId, userId));
+    return (result?.count ?? 0) > 0;
   }
 
   // Ideas methods

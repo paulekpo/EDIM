@@ -53,6 +53,12 @@ export default function Dashboard() {
     queryKey: ["/api/progress"],
   });
 
+  const { data: analyticsStatus } = useQuery<{ hasAnalytics: boolean }>({
+    queryKey: ["/api/analytics/exists"],
+  });
+
+  const hasAnalytics = analyticsStatus?.hasAnalytics ?? false;
+
   const generateIdeasMutation = useMutation({
     mutationFn: async (analyticsImportId?: string) => {
       const response = await apiRequest("POST", "/api/ideas/generate", {
@@ -157,6 +163,7 @@ export default function Dashboard() {
         const result = await response.json();
         setLastAnalyticsImportId(result.id);
         setAnalyticsModalOpen(false);
+        queryClient.invalidateQueries({ queryKey: ["/api/analytics/exists"] });
         toast({
           title: "Analytics Saved",
           description: "Your analytics have been saved. You can now generate ideas!",
@@ -346,6 +353,14 @@ export default function Dashboard() {
                     }))}
                     onSelectIdea={handleSelectIdea}
                     onUpload={() => setAnalyticsModalOpen(true)}
+                    onSpinBlocked={() => {
+                      toast({
+                        title: "Import analytics first",
+                        description: "Please import your TikTok analytics before spinning the wheel.",
+                        variant: "destructive",
+                      });
+                    }}
+                    hasAnalytics={hasAnalytics}
                     disabled={generateIdeasMutation.isPending}
                   />
                 )}
