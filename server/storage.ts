@@ -29,6 +29,7 @@ export interface IStorage {
   // Analytics Import methods
   createAnalyticsImport(data: InsertAnalyticsImport): Promise<AnalyticsImport>;
   getAnalyticsImport(id: string): Promise<AnalyticsImport | undefined>;
+  getAnalyticsImportForUser(id: string, userId: string): Promise<AnalyticsImport | undefined>;
   getAnalyticsImportsByUser(userId: string): Promise<AnalyticsImport[]>;
   hasAnalyticsImports(userId: string): Promise<boolean>;
 
@@ -108,6 +109,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(analyticsImports)
       .where(eq(analyticsImports.id, id));
+    return analyticsImport;
+  }
+
+  async getAnalyticsImportForUser(id: string, userId: string): Promise<AnalyticsImport | undefined> {
+    const [analyticsImport] = await db
+      .select()
+      .from(analyticsImports)
+      .where(and(eq(analyticsImports.id, id), eq(analyticsImports.userId, userId)));
     return analyticsImport;
   }
 

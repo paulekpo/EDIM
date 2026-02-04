@@ -223,7 +223,8 @@ Return only valid JSON, no markdown.`,
       }
 
       if (analyticsImportId) {
-        const importData = await storage.getAnalyticsImport(analyticsImportId);
+        // Use secure method that verifies user ownership
+        const importData = await storage.getAnalyticsImportForUser(analyticsImportId, userId);
         if (importData) {
           analyticsDataForAI = {
             trafficSources: (importData.trafficSources as Record<string, number>) || analyticsDataForAI.trafficSources,

@@ -358,7 +358,7 @@ export default function Dashboard() {
                   <Button
                     size="sm"
                     onClick={handleGenerateIdeas}
-                    disabled={generateIdeasMutation.isPending}
+                    disabled={!hasAnalytics || generateIdeasMutation.isPending}
                     className="flex-1 sm:flex-none bg-gradient-to-r from-purple-500 to-pink-500 text-xs sm:text-sm"
                     data-testid="generate-ideas-btn"
                   >
