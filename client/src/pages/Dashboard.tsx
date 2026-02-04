@@ -297,7 +297,7 @@ export default function Dashboard() {
             <Card data-testid="ideas-section" className="overflow-hidden">
               <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 space-y-0 pb-4 bg-gradient-to-r from-blue-500/5 to-purple-500/5">
                 <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-                  <span className="text-xl">🧠</span>
+                  <span className="text-xl">🎡</span>
                   Ideas Wheel
                 </CardTitle>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -309,7 +309,7 @@ export default function Dashboard() {
                     data-testid="upload-analytics-btn"
                   >
                     <span className="mr-1 sm:mr-2">📊</span>
-                    <span className="hidden sm:inline">Import your</span> Analytics
+                    Import Analytics
                   </Button>
                   <Button
                     size="sm"
