@@ -250,7 +250,7 @@ export default function Dashboard() {
   );
 
   const handleGenerateIdeas = useCallback(() => {
-    if (!lastAnalyticsImportId) {
+    if (!hasAnalytics && !lastAnalyticsImportId) {
       toast({
         title: "No analytics data",
         description: "Please import your channel or page analytics first before generating ideas.",
@@ -258,8 +258,8 @@ export default function Dashboard() {
       });
       return;
     }
-    generateIdeasMutation.mutate(lastAnalyticsImportId);
-  }, [generateIdeasMutation, lastAnalyticsImportId, toast]);
+    generateIdeasMutation.mutate(lastAnalyticsImportId || undefined);
+  }, [generateIdeasMutation, lastAnalyticsImportId, hasAnalytics, toast]);
 
   const activeIdeas = ideas.filter((i) => i.status !== "completed" && i.status !== "skipped");
 

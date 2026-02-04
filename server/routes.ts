@@ -202,7 +202,7 @@ Return only valid JSON, no markdown.`,
   app.post("/api/ideas/generate", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const { analyticsImportId } = req.body;
+      let { analyticsImportId } = req.body;
 
       let analyticsDataForAI: AnalyticsData = {
         trafficSources: {
@@ -213,6 +213,14 @@ Return only valid JSON, no markdown.`,
         },
         searchQueries: [],
       };
+
+      // If no specific analytics ID provided, use the most recent one
+      if (!analyticsImportId) {
+        const userImports = await storage.getAnalyticsImportsByUser(userId);
+        if (userImports.length > 0) {
+          analyticsImportId = userImports[0].id;
+        }
+      }
 
       if (analyticsImportId) {
         const importData = await storage.getAnalyticsImport(analyticsImportId);
