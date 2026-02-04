@@ -125,7 +125,7 @@ export function IdeasWheel({
       if (selectedIdea) {
         onSelectIdea?.(selectedIdea.id);
       }
-    }, 3000);
+    }, 3200);
   }, [
     disabled,
     isSpinning,
@@ -184,7 +184,13 @@ export function IdeasWheel({
           </span>
         </div>
         <Button
-          onClick={() => onSelectIdea?.(idea.id)}
+          onClick={() => {
+            if (!hasAnalytics) {
+              onSpinBlocked?.();
+              return;
+            }
+            onSelectIdea?.(idea.id);
+          }}
           disabled={disabled}
           data-testid="view-idea-button"
         >
@@ -211,7 +217,8 @@ export function IdeasWheel({
           width="300"
           height="300"
           viewBox="0 0 300 300"
-          className="drop-shadow-lg"
+          className="drop-shadow-lg cursor-pointer"
+          onClick={handleSpin}
         >
           <motion.g
             animate={{ rotate: rotation }}
@@ -238,7 +245,6 @@ export function IdeasWheel({
                     stroke={STATUS_STROKE_COLORS[idea.status]}
                     strokeWidth="2"
                     className="cursor-pointer transition-opacity hover:opacity-80"
-                    onClick={() => !isSpinning && onSelectIdea?.(idea.id)}
                   />
                   <text
                     x={textPos.x}
