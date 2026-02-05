@@ -2,7 +2,7 @@
 
 ## Overview
 
-EDIM (Entertainment Data to Idea Management) is a gamified content creation assistant MVP designed to help creators manage their content workflow. The application features an Ideas Wheel for random idea selection, an Achievement Wheel for tracking tier progression, and automatic project completion when all checklist items are checked. The system supports multiple users with individual accounts - each user has their own unique wheel, ideas, analytics, and progress tracking.
+EDIM (Entertainment Data to Idea Management) is a gamified content creation assistant MVP designed specifically for TikTok creators. The application features an Ideas Wheel for random idea selection, an Achievement Wheel for tracking tier progression, and automatic project completion when all checklist items are checked. TikTok is the only platform that shows both traffic sources and search queries together in analytics screenshots, making it ideal for AI-powered idea generation. The system supports multiple users with individual accounts - each user has their own unique wheel, ideas, TikTok analytics, and progress tracking.
 
 ### Authentication
 - **Provider**: Replit Auth via OpenID Connect (OIDC)

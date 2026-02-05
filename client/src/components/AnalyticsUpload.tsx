@@ -248,9 +248,9 @@ export function AnalyticsUpload({ open, onClose, onSubmit, isProcessing }: Analy
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <DialogContent className="sm:max-w-lg" data-testid="dialog-analytics-upload">
         <DialogHeader>
-          <DialogTitle data-testid="text-dialog-title">Import Your Analytics</DialogTitle>
+          <DialogTitle data-testid="text-dialog-title">Import TikTok Analytics</DialogTitle>
           <DialogDescription data-testid="text-dialog-description">
-            Upload a screenshot of your TikTok analytics or enter data manually
+            Upload a screenshot from your TikTok Creator Tools or enter your stats manually
           </DialogDescription>
         </DialogHeader>
 
@@ -297,7 +297,7 @@ export function AnalyticsUpload({ open, onClose, onSubmit, isProcessing }: Analy
                     />
                     <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                     <p className="text-sm text-muted-foreground mb-2">
-                      Drag and drop your analytics screenshot here
+                      Drag and drop your TikTok analytics screenshot
                     </p>
                     <p className="text-xs text-muted-foreground mb-4">
                       PNG, JPG or JPEG up to {MAX_FILE_SIZE_MB}MB
@@ -351,7 +351,7 @@ export function AnalyticsUpload({ open, onClose, onSubmit, isProcessing }: Analy
                 {uploadState === "processing" && (
                   <div className="py-8 text-center space-y-4" data-testid="processing-state">
                     <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
-                    <p className="text-sm font-medium">Analyzing your analytics...</p>
+                    <p className="text-sm font-medium">Analyzing your TikTok data...</p>
                     <Progress value={uploadProgress} className="w-full" data-testid="progress-upload" />
                     <p className="text-xs text-muted-foreground">
                       Extracting traffic sources and search queries
@@ -446,17 +446,17 @@ export function AnalyticsUpload({ open, onClose, onSubmit, isProcessing }: Analy
 
                 <div className="space-y-2">
                   <Label htmlFor="search-queries" className="text-sm font-medium">
-                    Search Queries
+                    Top Search Queries (Optional)
                   </Label>
                   <Input
                     id="search-queries"
-                    placeholder="cooking tips, easy recipes, meal prep"
+                    placeholder="viral trends, how to, tutorial"
                     value={searchQueriesInput}
                     onChange={(e) => setSearchQueriesInput(e.target.value)}
                     data-testid="input-search-queries"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Enter search terms separated by commas
+                    From TikTok Search tab - helps generate targeted ideas
                   </p>
                   {manualErrors.queries && (
                     <p className="text-xs text-destructive" data-testid="text-error-queries">

@@ -200,7 +200,7 @@ export default function Dashboard() {
       } catch {
         toast({
           title: "Error",
-          description: "Failed to save analytics. Please try again.",
+          description: "Failed to save TikTok data. Please try again.",
           variant: "destructive",
         });
       }
@@ -274,8 +274,8 @@ export default function Dashboard() {
   const handleGenerateIdeas = useCallback(() => {
     if (!hasAnalytics && !lastAnalyticsImportId) {
       toast({
-        title: "No analytics data",
-        description: "Please import your channel or page analytics first before generating ideas.",
+        title: "No TikTok data",
+        description: "Please import your TikTok analytics first before generating ideas.",
         variant: "destructive",
       });
       return;
@@ -375,7 +375,7 @@ export default function Dashboard() {
                     data-testid="upload-analytics-btn"
                   >
                     <span className="mr-1 sm:mr-2">📊</span>
-                    Import Analytics
+                    Import TikTok
                   </Button>
                   <Button
                     size="sm"
@@ -418,8 +418,8 @@ export default function Dashboard() {
                     onUpload={() => setAnalyticsModalOpen(true)}
                     onSpinBlocked={() => {
                       toast({
-                        title: "Import analytics first",
-                        description: "Please import your channel or page analytics before spinning the wheel.",
+                        title: "Import TikTok first",
+                        description: "Please import your TikTok analytics before spinning the wheel.",
                         variant: "destructive",
                       });
                     }}
