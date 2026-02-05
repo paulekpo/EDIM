@@ -175,11 +175,23 @@ export default function Dashboard() {
         // Immediately update the cache to enable Generate button
         queryClient.setQueryData(["/api/analytics/exists"], { hasAnalytics: true });
         queryClient.invalidateQueries({ queryKey: ["/api/analytics/exists"] });
-        toast({
-          title: "Analytics Saved",
-          description: "Generating your personalized ideas...",
-        });
-        // Auto-generate ideas after saving analytics
+        
+        // Check if search queries are missing and alert user
+        const hasSearchQueries = data.searchQueries && data.searchQueries.length > 0;
+        if (!hasSearchQueries) {
+          toast({
+            title: "Search Queries Missing",
+            description: "For more personalized ideas, try manual entry with your top search terms.",
+            variant: "default",
+          });
+        } else {
+          toast({
+            title: "Analytics Saved",
+            description: "Generating your personalized ideas...",
+          });
+        }
+        
+        // Auto-generate ideas after saving analytics - will reload wheel with new ideas
         generateIdeasMutation.mutate(result.id);
       } catch {
         toast({
