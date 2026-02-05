@@ -175,8 +175,10 @@ export default function Dashboard() {
         queryClient.invalidateQueries({ queryKey: ["/api/analytics/exists"] });
         toast({
           title: "Analytics Saved",
-          description: "Your analytics have been saved. You can now generate ideas!",
+          description: "Generating your personalized ideas...",
         });
+        // Auto-generate ideas after saving analytics
+        generateIdeasMutation.mutate(result.id);
       } catch {
         toast({
           title: "Error",
@@ -185,7 +187,7 @@ export default function Dashboard() {
         });
       }
     },
-    [toast]
+    [toast, generateIdeasMutation]
   );
 
   const handleSelectIdea = useCallback(
