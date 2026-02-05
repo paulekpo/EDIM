@@ -68,6 +68,8 @@ export default function Dashboard() {
   const hasAnalytics = analyticsStatus?.hasAnalytics ?? false;
   const isAdmin = adminStatus?.isAdmin ?? false;
 
+  const [pendingMissingQueriesWarning, setPendingMissingQueriesWarning] = useState(false);
+  
   const generateIdeasMutation = useMutation({
     mutationFn: async (analyticsImportId?: string) => {
       const response = await apiRequest("POST", "/api/ideas/generate", {
@@ -78,12 +80,23 @@ export default function Dashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/ideas"] });
-      toast({
-        title: "Ideas Generated!",
-        description: "New content ideas have been added to your wheel.",
-      });
+      
+      // Show warning about missing queries if applicable
+      if (pendingMissingQueriesWarning) {
+        toast({
+          title: "Ideas Generated - Search Queries Missing",
+          description: "Ideas added to your wheel. For more personalized results, try manual entry with your top search terms.",
+        });
+        setPendingMissingQueriesWarning(false);
+      } else {
+        toast({
+          title: "Ideas Generated!",
+          description: "New content ideas have been added to your wheel.",
+        });
+      }
     },
     onError: () => {
+      setPendingMissingQueriesWarning(false);
       toast({
         title: "Error",
         description: "Failed to generate ideas. Please try again.",
@@ -176,19 +189,10 @@ export default function Dashboard() {
         queryClient.setQueryData(["/api/analytics/exists"], { hasAnalytics: true });
         queryClient.invalidateQueries({ queryKey: ["/api/analytics/exists"] });
         
-        // Check if search queries are missing and alert user
+        // Check if search queries are missing - set flag to show warning in success toast
         const hasSearchQueries = data.searchQueries && data.searchQueries.length > 0;
         if (!hasSearchQueries) {
-          toast({
-            title: "Search Queries Missing",
-            description: "For more personalized ideas, try manual entry with your top search terms.",
-            variant: "default",
-          });
-        } else {
-          toast({
-            title: "Analytics Saved",
-            description: "Generating your personalized ideas...",
-          });
+          setPendingMissingQueriesWarning(true);
         }
         
         // Auto-generate ideas after saving analytics - will reload wheel with new ideas

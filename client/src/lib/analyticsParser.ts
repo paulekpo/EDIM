@@ -44,10 +44,8 @@ export function parseSearchQueries(input: string): string[] {
     .filter((q) => q.length > 0);
 }
 
-export function validateSearchQueries(queries: string[]): { isValid: boolean; error?: string } {
-  if (queries.length === 0) {
-    return { isValid: false, error: "At least one search query is required" };
-  }
+export function validateSearchQueries(_queries: string[]): { isValid: boolean; error?: string } {
+  // Search queries are optional - if missing, user will see a suggestion toast
   return { isValid: true };
 }
 
