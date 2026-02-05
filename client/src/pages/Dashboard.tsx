@@ -375,7 +375,7 @@ export default function Dashboard() {
                     data-testid="upload-analytics-btn"
                   >
                     <span className="mr-1 sm:mr-2">📊</span>
-                    Import TikTok
+                    Import Analytics Data
                   </Button>
                   <Button
                     size="sm"
