@@ -12,6 +12,8 @@ import ProfilePage from "@/pages/ProfilePage";
 import LandingPage from "@/pages/LandingPage";
 import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InstallPrompt } from "@/components/InstallPrompt";
+import { Lightbulb } from "lucide-react";
 
 function AuthenticatedRouter() {
   return (
@@ -32,10 +34,12 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" data-testid="loading-container">
         <div className="flex flex-col items-center gap-4">
-          <div className="text-4xl">🎡</div>
-          <Skeleton className="h-4 w-32" />
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center animate-pulse" data-testid="loading-icon">
+            <Lightbulb className="w-6 h-6 text-white" />
+          </div>
+          <Skeleton className="h-4 w-32" data-testid="loading-skeleton" />
         </div>
       </div>
     );
@@ -54,6 +58,7 @@ function App() {
       <TooltipProvider>
         <Toaster />
         <AppContent />
+        <InstallPrompt />
       </TooltipProvider>
     </QueryClientProvider>
   );
