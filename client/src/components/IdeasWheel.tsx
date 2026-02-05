@@ -238,13 +238,23 @@ export function IdeasWheel({
               const textRotation = midAngle - 90;
 
               return (
-                <g key={idea.id} data-testid={`wheel-segment-${idea.id}`}>
+                <g 
+                  key={idea.id} 
+                  data-testid={`wheel-segment-${idea.id}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!isSpinning) {
+                      onSelectIdea?.(idea.id);
+                    }
+                  }}
+                  className="cursor-pointer"
+                >
                   <path
                     d={describeArc(cx, cy, radius, startAngle, endAngle)}
                     fill={STATUS_COLORS[idea.status]}
                     stroke={STATUS_STROKE_COLORS[idea.status]}
                     strokeWidth="2"
-                    className="cursor-pointer transition-opacity hover:opacity-80"
+                    className="transition-opacity hover:opacity-80"
                   />
                   <text
                     x={textPos.x}

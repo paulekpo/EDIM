@@ -472,14 +472,18 @@ export default function Dashboard() {
                         <Lightbulb className="w-3 h-3" /> Active
                       </p>
                     </button>
-                    <div className="text-center p-3 sm:p-4 rounded-lg bg-gradient-to-br from-green-500/10 to-green-600/5 border border-green-500/20">
+                    <button
+                      onClick={() => setActiveProjectsOpen(true)}
+                      className="text-center p-3 sm:p-4 rounded-lg bg-gradient-to-br from-green-500/10 to-green-600/5 border border-green-500/20 cursor-pointer transition-all active:scale-95"
+                      data-testid="stat-in-progress-btn"
+                    >
                       <p className="text-xl sm:text-2xl font-bold text-green-600" data-testid="stat-in-progress">
                         {activeIdeas.filter((i) => i.status === "in_progress").length}
                       </p>
                       <p className="text-xs sm:text-sm text-muted-foreground flex items-center justify-center gap-1">
                         <Rocket className="w-3 h-3" /> In Progress
                       </p>
-                    </div>
+                    </button>
                     <div className="text-center p-3 sm:p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20">
                       <p className="text-xl sm:text-2xl font-bold text-purple-600" data-testid="stat-completed-tier">
                         {progress?.completedInTier || 0}
