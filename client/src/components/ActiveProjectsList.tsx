@@ -13,6 +13,7 @@ interface ActiveProjectsListProps {
   open: boolean;
   onClose: () => void;
   onSelectIdea: (id: string) => void;
+  filter?: "all" | "in_progress";
 }
 
 export function ActiveProjectsList({
@@ -20,7 +21,11 @@ export function ActiveProjectsList({
   open,
   onClose,
   onSelectIdea,
+  filter = "all",
 }: ActiveProjectsListProps) {
+  const filteredIdeas = filter === "in_progress" 
+    ? ideas.filter(idea => idea.status === "in_progress")
+    : ideas;
   const handleSelect = (id: string) => {
     onSelectIdea(id);
     onClose();
@@ -82,21 +87,29 @@ export function ActiveProjectsList({
             <div className="px-6 pb-8">
               <div className="flex flex-col items-center text-center mb-6">
                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-4">
-                  <Lightbulb className="w-8 h-8 text-blue-500" />
+                  {filter === "in_progress" ? (
+                    <Play className="w-8 h-8 text-green-500" />
+                  ) : (
+                    <Lightbulb className="w-8 h-8 text-blue-500" />
+                  )}
                 </div>
-                <h2 className="text-xl font-bold mb-2">All Active Projects</h2>
+                <h2 className="text-xl font-bold mb-2">
+                  {filter === "in_progress" ? "In Progress Projects" : "All Active Projects"}
+                </h2>
                 <p className="text-sm text-muted-foreground">
-                  {ideas.length} project{ideas.length !== 1 ? "s" : ""} in your queue
+                  {filteredIdeas.length} project{filteredIdeas.length !== 1 ? "s" : ""} {filter === "in_progress" ? "in progress" : "in your queue"}
                 </p>
               </div>
 
               <div className="space-y-3">
-                {ideas.length === 0 ? (
+                {filteredIdeas.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">
-                    No active projects yet. Generate some ideas to get started!
+                    {filter === "in_progress" 
+                      ? "No projects in progress yet. Start working on an idea!" 
+                      : "No active projects yet. Generate some ideas to get started!"}
                   </p>
                 ) : (
-                  ideas.map((idea) => (
+                  filteredIdeas.map((idea) => (
                     <Button
                       key={idea.id}
                       variant="outline"

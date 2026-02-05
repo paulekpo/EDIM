@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { IdeasWheel } from "@/components/IdeasWheel";
 import { AchievementWheel } from "@/components/AchievementWheel";
 import { AnalyticsUpload } from "@/components/AnalyticsUpload";
@@ -41,10 +41,12 @@ interface ProgressData {
 export default function Dashboard() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<IdeaData | null>(null);
   const [ideaModalOpen, setIdeaModalOpen] = useState(false);
   const [activeProjectsOpen, setActiveProjectsOpen] = useState(false);
+  const [projectsFilter, setProjectsFilter] = useState<"all" | "in_progress">("all");
   const [lastAnalyticsImportId, setLastAnalyticsImportId] = useState<string | null>(null);
 
   const { data: ideas = [], isLoading: ideasLoading, error: ideasError, refetch: refetchIdeas } = useQuery<IdeaData[]>({
@@ -461,7 +463,10 @@ export default function Dashboard() {
                 <CardContent className="pt-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                     <button
-                      onClick={() => setActiveProjectsOpen(true)}
+                      onClick={() => {
+                        setProjectsFilter("all");
+                        setActiveProjectsOpen(true);
+                      }}
                       className="text-center p-3 sm:p-4 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 cursor-pointer transition-all active:scale-95"
                       data-testid="stat-active-ideas-btn"
                     >
@@ -473,7 +478,10 @@ export default function Dashboard() {
                       </p>
                     </button>
                     <button
-                      onClick={() => setActiveProjectsOpen(true)}
+                      onClick={() => {
+                        setProjectsFilter("in_progress");
+                        setActiveProjectsOpen(true);
+                      }}
                       className="text-center p-3 sm:p-4 rounded-lg bg-gradient-to-br from-green-500/10 to-green-600/5 border border-green-500/20 cursor-pointer transition-all active:scale-95"
                       data-testid="stat-in-progress-btn"
                     >
@@ -484,14 +492,18 @@ export default function Dashboard() {
                         <Rocket className="w-3 h-3" /> In Progress
                       </p>
                     </button>
-                    <div className="text-center p-3 sm:p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20">
+                    <button
+                      onClick={() => navigate("/completed")}
+                      className="text-center p-3 sm:p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20 cursor-pointer transition-all active:scale-95"
+                      data-testid="stat-completed-btn"
+                    >
                       <p className="text-xl sm:text-2xl font-bold text-purple-600" data-testid="stat-completed-tier">
                         {progress?.completedInTier || 0}
                       </p>
                       <p className="text-xs sm:text-sm text-muted-foreground flex items-center justify-center gap-1">
                         <CheckCircle className="w-3 h-3" /> Done
                       </p>
-                    </div>
+                    </button>
                     <div className="text-center p-3 sm:p-4 rounded-lg bg-gradient-to-br from-orange-500/10 to-orange-600/5 border border-orange-500/20">
                       <p className="text-xl sm:text-2xl font-bold text-orange-600" data-testid="stat-to-next-tier">
                         {progress ? progress.threshold - progress.completedInTier : 0}
@@ -533,6 +545,7 @@ export default function Dashboard() {
         open={activeProjectsOpen}
         onClose={() => setActiveProjectsOpen(false)}
         onSelectIdea={handleSelectIdea}
+        filter={projectsFilter}
       />
     </motion.div>
   );
