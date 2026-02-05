@@ -44,8 +44,13 @@ export function parseSearchQueries(input: string): string[] {
     .filter((q) => q.length > 0);
 }
 
-export function validateSearchQueries(_queries: string[]): { isValid: boolean; error?: string } {
-  // Search queries are optional - if missing, user will see a suggestion toast
+export function validateSearchQueries(queries: string[]): { isValid: boolean; error?: string } {
+  if (queries.length === 0) {
+    return { 
+      isValid: false, 
+      error: "Add what people search to find your videos (check TikTok's Search tab in analytics)" 
+    };
+  }
   return { isValid: true };
 }
 

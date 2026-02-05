@@ -446,7 +446,7 @@ export function AnalyticsUpload({ open, onClose, onSubmit, isProcessing }: Analy
 
                 <div className="space-y-2">
                   <Label htmlFor="search-queries" className="text-sm font-medium">
-                    Top Search Queries (Optional)
+                    Top Search Queries
                   </Label>
                   <Input
                     id="search-queries"
@@ -456,7 +456,7 @@ export function AnalyticsUpload({ open, onClose, onSubmit, isProcessing }: Analy
                     data-testid="input-search-queries"
                   />
                   <p className="text-xs text-muted-foreground">
-                    From TikTok Search tab - helps generate targeted ideas
+                    What people search to find your videos (from TikTok Search tab)
                   </p>
                   {manualErrors.queries && (
                     <p className="text-xs text-destructive" data-testid="text-error-queries">
