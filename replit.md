@@ -29,6 +29,15 @@ Preferred communication style: Simple, everyday language.
 - **Styling**: Tailwind CSS with shadcn/ui component library (New York style)
 - **Animations**: Framer Motion for smooth UI transitions and wheel animations
 - **Component Pattern**: Path aliases configured (`@/` for client src, `@shared/` for shared code)
+- **PWA Support**: Progressive Web App with installable mobile experience
+
+### Progressive Web App (PWA)
+- **Manifest**: `client/public/manifest.json` with app name, icons, theme colors
+- **Service Worker**: `client/public/sw.js` for offline caching and SPA navigation fallback
+- **Icons**: Multiple sizes (72-512px) in `client/public/icons/`
+- **Install Prompt**: Shows on mobile devices with iOS-specific instructions
+- **Offline Support**: Static assets cached, API failures return friendly error messages
+- **Standalone Mode**: Full-screen experience without browser chrome
 
 ### Backend Architecture
 - **Framework**: Express.js (v5) with TypeScript running on Node.js
