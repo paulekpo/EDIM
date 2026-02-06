@@ -17,7 +17,7 @@ import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_inte
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 
 function getUserId(req: any): string {
-  return req.user?.claims?.sub;
+  return req.user?.id;
 }
 
 // Admin middleware - checks if user is authenticated and is an admin
