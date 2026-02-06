@@ -1,5 +1,6 @@
 {
   "name": "rest-express",
+  "description": "EDIM: A gamified, AI-powered content creation assistant for TikTok creators, prioritizing Google Gemini and Google Auth.",
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",

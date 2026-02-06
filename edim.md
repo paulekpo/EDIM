@@ -1,84 +1,58 @@
-# TikTok Content Gamification App (EDIM)
+# EDIM (Entertainment Data to Idea Management)
 
 ## Overview
+EDIM is a gamified content creation assistant MVP designed specifically for TikTok creators. It solves the "blank page problem" by turning raw analytics data into actionable, gamified tasks.
 
-EDIM (Entertainment Data to Idea Management) is a gamified content creation assistant MVP designed specifically for TikTok creators. The application features an Ideas Wheel for random idea selection, an Achievement Wheel for tracking tier progression, and automatic project completion when all checklist items are checked. TikTok is the only platform that shows both traffic sources and search queries together in analytics screenshots, making it ideal for AI-powered idea generation. The system supports multiple users with individual accounts - each user has their own unique wheel, ideas, TikTok analytics, and progress tracking.
+**Core Philosophy:** Data-driven creativity without the stress.
+- No deadlines.
+- No "due dates".
+- No pressure.
+- Just spin the wheel and create.
 
-### Authentication
-- **Provider**: Google OAuth 2.0 (via Passport.js)
-- **Features**: Google login
-- **Session Storage**: PostgreSQL with connect-pg-simple
-- **User Data**: Each user has separate ideas, analytics imports, and tier progress
+## Key Features
 
-### Admin System
-- **Primary Admin**: paul.ekpo9@gmail.com (auto-set on login)
-- **Admin Dashboard**: /admin route with stats and user management
-- **Features**: View all users, toggle admin status, see platform statistics
-- **Access Control**: Non-admins see "Access Denied" page, admin nav link only visible to admins
+### 1. AI-Powered Intelligence (Google Gemini)
+The entire application is powered by **Google Gemini (`gemini-1.5-flash`)**, replacing older OpenAI integrations for speed and cost-efficiency.
+- **Analytics Parsing**: Upload screenshots of your TikTok analytics. Gemini Vision reads the traffic sources (For You Page vs. Search) and extracts top search queries.
+- **Script Generation**: Based on *your* specific data, Gemini generates unique "How-To" video ideas tailored to what your audience is already searching for.
 
-## User Preferences
+### 2. Gamified Workflow
+- **The Ideas Wheel**: A visual spinner that selects your next project. It only spins when you have 2+ ideas, preventing decision paralysis.
+- **The Achievement Wheel**: A static progress tracker that visualizes your journey through the tiers.
+- **Tier System**:
+  - **Amateur**: 5 videos (20% progress each)
+  - **Professional**: 10 videos (10% progress each)
+  - **Expert**: 15 videos (6.67% progress each)
 
-Preferred communication style: Simple, everyday language.
+### 3. Stress-Free Management
+- **Smart Checklists**: Every idea comes with a 4-step actionable checklist.
+- **Auto-Completion**: There is no "Complete" button. The project automatically marks itself as done when you check the final box, triggering a confetti celebration and updating your progress.
+- **Color-Coded Status**:
+  - White: Unstarted
+  - Green: In Progress
+  - Gray: Skipped
 
-## System Architecture
+## Technical Stack
 
-### Frontend Architecture
-- **Framework**: React with TypeScript, using Vite as the build tool
-- **Routing**: Wouter for lightweight client-side routing
-- **State Management**: TanStack React Query for server state management
-- **Styling**: Tailwind CSS with shadcn/ui component library (New York style)
-- **Animations**: Framer Motion for smooth UI transitions and wheel animations
-- **Component Pattern**: Path aliases configured (`@/` for client src, `@shared/` for shared code)
-- **PWA Support**: Progressive Web App with installable mobile experience
+### Backend
+- **Runtime**: Node.js
+- **Framework**: Express.js (v5)
+- **Language**: TypeScript
+- **Database**: PostgreSQL (with Drizzle ORM)
+- **AI Provider**: Google Gemini (`@google/generative-ai`)
+- **Authentication**: Google OAuth 2.0 (`passport-google-oauth20`) via Passport.js
 
-### Progressive Web App (PWA)
-- **Manifest**: `client/public/manifest.json` with app name, icons, theme colors
-- **Service Worker**: `client/public/sw.js` for offline caching and SPA navigation fallback
-- **Icons**: Multiple sizes (72-512px) in `client/public/icons/`
-- **Install Prompt**: Shows on mobile devices with iOS-specific instructions
-- **Offline Support**: Static assets cached, API failures return friendly error messages
-- **Standalone Mode**: Full-screen experience without browser chrome
+### Frontend
+- **Framework**: React (v18)
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS + Shadcn UI
+- **State Management**: TanStack Query
+- **Routing**: Wouter
 
-### Backend Architecture
-- **Framework**: Express.js (v5) with TypeScript running on Node.js
-- **API Pattern**: RESTful API endpoints under `/api/` prefix
-- **Build System**: Custom build script using esbuild for server bundling and Vite for client
-- **Development**: tsx for TypeScript execution, hot module replacement via Vite
+## User Guide
 
-### Data Storage
-- **Database**: PostgreSQL with Drizzle ORM
-- **Schema Location**: `shared/schema.ts` - shared between client and server
-- **Migrations**: Drizzle Kit with migrations stored in `/migrations`
-- **Key Tables**: users, ideas, checklist_items, analytics_imports, notifications, conversations, messages
-
-### Core Business Logic Rules
-- Ideas Wheel only spins when 2+ ideas are present
-- Achievement Wheel is static (display only, does not spin)
-- Auto-completion triggers when all checklist items are checked (no manual complete button)
-- No deadline or due date pressure on projects
-- Tier progression: Amateur (5 videos @ 20% each), Professional (10 @ 10%), Expert (15 @ 6.67%)
-- Color-coded idea states: white=unstarted, green=in-progress, gray=skipped
-- Duplicate ideas prevented via semantic similarity checking
-
-### AI Integration
-- Google Gemini API for idea generation, duplicate detection, and analytics screenshot parsing
-- Configured via environment variables: `GEMINI_API_KEY`
-- AI service located in `server/services/aiService.ts`
-
-## External Dependencies
-
-### Database
-- PostgreSQL database required
-- Connection via `DATABASE_URL` environment variable
-- Uses `connect-pg-simple` for session storage
-
-### AI Services
-- Google Gemini API
-- Used for: idea generation, duplicate detection, analytics screenshot parsing
-
-### Key NPM Dependencies
-- `drizzle-orm` / `drizzle-zod` - Database ORM and validation
-- `@tanstack/react-query` - Server state management
-- `framer-motion` - Animations
-- `@google/generative-ai` - AI API client
-- Full shadcn/ui component suite via Radix UI primitives
+1.  **Login**: Sign in securely using your Google account.
+2.  **Upload**: Go to the dashboard and upload a screenshot of your TikTok analytics.
+3.  **Generate**: Let Gemini analyze the data and propose 8 high-potential video ideas.
+4.  **Spin**: Click "Spin" on the Ideas Wheel to let fate decide your next video.
+5.  **Create**: Follow the checklist. Once you check the last item, the project completes automatically, and you level up!
