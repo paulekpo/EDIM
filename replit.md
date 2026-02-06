@@ -61,10 +61,9 @@ Preferred communication style: Simple, everyday language.
 - Duplicate ideas prevented via semantic similarity checking
 
 ### AI Integration
-- OpenAI API for idea generation and duplicate detection
-- Configured via environment variables: `AI_INTEGRATIONS_OPENAI_API_KEY`, `AI_INTEGRATIONS_OPENAI_BASE_URL`
+- Google Gemini API for idea generation, duplicate detection, and analytics screenshot parsing
+- Configured via environment variables: `GEMINI_API_KEY`
 - AI service located in `server/services/aiService.ts`
-- Supports voice chat, image generation, and batch processing through replit integrations
 
 ## External Dependencies
 
@@ -74,13 +73,12 @@ Preferred communication style: Simple, everyday language.
 - Uses `connect-pg-simple` for session storage
 
 ### AI Services
-- OpenAI API (or compatible endpoint via Replit AI Integrations)
+- Google Gemini API
 - Used for: idea generation, duplicate detection, analytics screenshot parsing
-- Voice/audio processing capabilities available
 
 ### Key NPM Dependencies
 - `drizzle-orm` / `drizzle-zod` - Database ORM and validation
 - `@tanstack/react-query` - Server state management
 - `framer-motion` - Animations
-- `openai` - AI API client
+- `@google/generative-ai` - AI API client
 - Full shadcn/ui component suite via Radix UI primitives

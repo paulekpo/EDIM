@@ -1,6 +1,6 @@
 export {
   generateIdeas,
-  parseGPTResponse,
+  parseAIResponse,
   checkDuplicates,
   analyzeScreenshot,
   type GeneratedIdea,
