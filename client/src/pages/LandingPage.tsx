@@ -22,12 +22,11 @@ export default function LandingPage() {
         <main className="max-w-4xl mx-auto">
           <section className="text-center mb-16">
             <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
-              Turn Your Analytics Into
-              <span className="text-primary block">Content Ideas</span>
+              Stop Guessing What
+              <span className="text-primary block">Videos To Create</span>
             </h1>
             <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-              EDIM helps content creators transform their channel analytics into actionable video ideas. 
-              Spin the wheel, track your progress, and level up your content game.
+              Upload analytics screenshot and let EDIM do it for you.
             </p>
             <a href="/api/login">
               <Button size="lg" className="gap-2" data-testid="button-get-started">
