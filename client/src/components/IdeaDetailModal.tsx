@@ -14,8 +14,11 @@ import {
   TrendingUp,
   Search,
   CheckSquare,
-  Trash2
+  Trash2,
+  Heart
 } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 interface ChecklistItemData {
   id: string;
@@ -33,6 +36,7 @@ interface IdeaData {
   title: string;
   rationale?: string | null;
   status: string;
+  isFavorite: boolean;
   checklistItems: ChecklistItemData[];
   analyticsData?: AnalyticsData | null;
 }
@@ -59,6 +63,7 @@ export function IdeaDetailModal({
   onComplete,
   onChecklistUpdate,
 }: IdeaDetailModalProps) {
+  const queryClient = useQueryClient();
   const [localItems, setLocalItems] = useState<ChecklistItemData[]>([]);
   const [showConfetti, setShowConfetti] = useState(false);
   const [justCompleted, setJustCompleted] = useState(false);
@@ -73,6 +78,18 @@ export function IdeaDetailModal({
       setEditingId(null);
     }
   }, [idea]);
+
+  const toggleFavoriteMutation = useMutation({
+    mutationFn: async (ideaId: string) => {
+      const res = await apiRequest("PATCH", `/api/ideas/${ideaId}/favorite`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ideas"] });
+      // Also update the local idea object if possible, but invalidating queries handles the list
+      // For the modal content, we rely on the parent passing updated props or invalidation triggering parent re-render
+    },
+  });
 
   useEffect(() => {
     if (editingId && inputRef.current) {
@@ -195,10 +212,19 @@ export function IdeaDetailModal({
               duration={3000}
               onComplete={handleConfettiComplete}
             />
-              <div className="sticky top-0 z-10 flex justify-end p-3 bg-background">
+            <div className="sticky top-0 z-10 flex justify-between p-3 bg-background">
+                <button
+                  onClick={() => idea && toggleFavoriteMutation.mutate(idea.id)}
+                  className="p-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+                  data-testid="favorite-button"
+                >
+                  <Heart
+                    className={`w-5 h-5 transition-colors ${idea?.isFavorite ? "fill-red-500 text-red-500" : "text-muted-foreground"}`}
+                  />
+                </button>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-full bg-muted"
+                  className="p-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
                   data-testid="close-modal-button"
                 >
                   <X className="w-5 h-5" />

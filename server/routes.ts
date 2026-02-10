@@ -319,6 +319,25 @@ export async function registerRoutes(
     }
   });
 
+  // PATCH /api/ideas/:id/favorite - Toggle favorite status
+  app.patch("/api/ideas/:id/favorite", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const idea = await storage.getIdea(req.params.id as string);
+      if (!idea) {
+        return res.status(404).json({ error: "Idea not found" });
+      }
+
+      const updatedIdea = await storage.toggleIdeaFavorite(req.params.id as string);
+      await storage.updateUserActivity(userId);
+
+      res.json(updatedIdea);
+    } catch (error) {
+      console.error("Toggle favorite idea error:", error);
+      res.status(500).json({ error: "Failed to toggle favorite status" });
+    }
+  });
+
   // DELETE /api/ideas/:id - Delete idea
   app.delete("/api/ideas/:id", async (req, res) => {
     try {

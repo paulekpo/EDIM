@@ -26,6 +26,7 @@ interface IdeaData {
   title: string;
   rationale?: string | null;
   status: string;
+  isFavorite: boolean;
   checklistItems: ChecklistItemData[];
 }
 

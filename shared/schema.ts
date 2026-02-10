@@ -37,6 +37,7 @@ export const ideas = pgTable("ideas", {
   tierCompletedIn: text("tier_completed_in"),
   completionNumber: integer("completion_number"),
   completedAt: timestamp("completed_at"),
+  isFavorite: boolean("is_favorite").notNull().default(false),
   createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 

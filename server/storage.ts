@@ -39,6 +39,7 @@ export interface IStorage {
   getIdeasByUser(userId: string, status?: string): Promise<Idea[]>;
   getActiveIdeas(userId: string): Promise<Idea[]>;
   updateIdea(id: string, data: Partial<Idea>): Promise<Idea | undefined>;
+  toggleIdeaFavorite(id: string): Promise<Idea | undefined>;
   deleteIdea(id: string): Promise<void>;
   countCompletedIdeasInTier(userId: string, tier: string): Promise<number>;
 
@@ -179,6 +180,18 @@ export class DatabaseStorage implements IStorage {
     const [updatedIdea] = await db
       .update(ideas)
       .set(data)
+      .where(eq(ideas.id, id))
+      .returning();
+    return updatedIdea;
+  }
+
+  async toggleIdeaFavorite(id: string): Promise<Idea | undefined> {
+    const [currentIdea] = await db.select().from(ideas).where(eq(ideas.id, id));
+    if (!currentIdea) return undefined;
+
+    const [updatedIdea] = await db
+      .update(ideas)
+      .set({ isFavorite: !currentIdea.isFavorite })
       .where(eq(ideas.id, id))
       .returning();
     return updatedIdea;
