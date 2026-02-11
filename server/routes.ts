@@ -241,36 +241,36 @@ Return only valid JSON, no markdown.`,
       
       const uniqueIdeas = checkDuplicates(generatedIdeas, previousTitles);
 
-      const createdIdeas = await Promise.all(
-        uniqueIdeas.map(async (idea, index) => {
-          const newIdea = await storage.createIdea({
-            userId,
-            analyticsImportId: analyticsImportId || null,
-            title: idea.title,
-            rationale: idea.rationale,
-            status: "unstarted",
-            position: index,
-          });
+      // Batch create ideas
+      const ideasToCreate = uniqueIdeas.map((idea, index) => ({
+        userId,
+        analyticsImportId: analyticsImportId || null,
+        title: idea.title,
+        rationale: idea.rationale,
+        status: "unstarted",
+        position: index,
+      }));
 
-          const checklistItems = idea.checklist.length === 4 
-            ? idea.checklist 
-            : DEFAULT_CHECKLIST_ITEMS;
+      const createdIdeas = await storage.createIdeas(ideasToCreate);
 
-          await Promise.all(
-            checklistItems.map((text, pos) =>
-              storage.createChecklistItem({
-                ideaId: newIdea.id,
-                text,
-                isChecked: false,
-                isDefault: true,
-                position: pos,
-              })
-            )
-          );
+      // Create a map of title -> checklist to safely match created ideas with their checklists
+      const checklistMap = new Map(uniqueIdeas.map((ui) => [ui.title, ui.checklist]));
 
-          return newIdea;
-        })
-      );
+      const checklistItemsToCreate = createdIdeas.flatMap((idea) => {
+        const checklist = checklistMap.get(idea.title);
+        const items =
+          checklist && checklist.length === 4 ? checklist : DEFAULT_CHECKLIST_ITEMS;
+
+        return items.map((text, pos) => ({
+          ideaId: idea.id,
+          text,
+          isChecked: false,
+          isDefault: true,
+          position: pos,
+        }));
+      });
+
+      await storage.createChecklistItems(checklistItemsToCreate);
 
       await storage.updateUserActivity(userId);
 

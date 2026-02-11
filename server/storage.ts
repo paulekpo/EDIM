@@ -35,6 +35,7 @@ export interface IStorage {
 
   // Ideas methods
   createIdea(data: InsertIdea): Promise<Idea>;
+  createIdeas(data: InsertIdea[]): Promise<Idea[]>;
   getIdea(id: string): Promise<Idea | undefined>;
   getIdeasByUser(userId: string, status?: string): Promise<Idea[]>;
   getActiveIdeas(userId: string): Promise<Idea[]>;
@@ -44,6 +45,7 @@ export interface IStorage {
 
   // Checklist methods
   createChecklistItem(data: InsertChecklistItem): Promise<ChecklistItem>;
+  createChecklistItems(data: InsertChecklistItem[]): Promise<ChecklistItem[]>;
   getChecklistItems(ideaId: string): Promise<ChecklistItem[]>;
   updateChecklistItem(id: string, data: Partial<ChecklistItem>): Promise<ChecklistItem | undefined>;
   toggleChecklistItem(id: string): Promise<ChecklistItem | undefined>;
@@ -142,6 +144,11 @@ export class DatabaseStorage implements IStorage {
     return idea;
   }
 
+  async createIdeas(data: InsertIdea[]): Promise<Idea[]> {
+    if (data.length === 0) return [];
+    return db.insert(ideas).values(data).returning();
+  }
+
   async getIdea(id: string): Promise<Idea | undefined> {
     const [idea] = await db.select().from(ideas).where(eq(ideas.id, id));
     return idea;
@@ -206,6 +213,11 @@ export class DatabaseStorage implements IStorage {
   async createChecklistItem(data: InsertChecklistItem): Promise<ChecklistItem> {
     const [item] = await db.insert(checklistItems).values(data).returning();
     return item;
+  }
+
+  async createChecklistItems(data: InsertChecklistItem[]): Promise<ChecklistItem[]> {
+    if (data.length === 0) return [];
+    return db.insert(checklistItems).values(data).returning();
   }
 
   async getChecklistItems(ideaId: string): Promise<ChecklistItem[]> {
