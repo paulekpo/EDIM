@@ -31,6 +31,7 @@ export interface IStorage {
   getAnalyticsImport(id: string): Promise<AnalyticsImport | undefined>;
   getAnalyticsImportForUser(id: string, userId: string): Promise<AnalyticsImport | undefined>;
   getAnalyticsImportsByUser(userId: string): Promise<AnalyticsImport[]>;
+  getAnalyticsImports(ids: string[]): Promise<Map<string, AnalyticsImport>>;
   hasAnalyticsImports(userId: string): Promise<boolean>;
 
   // Ideas methods
@@ -45,6 +46,7 @@ export interface IStorage {
   // Checklist methods
   createChecklistItem(data: InsertChecklistItem): Promise<ChecklistItem>;
   getChecklistItems(ideaId: string): Promise<ChecklistItem[]>;
+  getChecklistItemsForIdeas(ideaIds: string[]): Promise<Map<string, ChecklistItem[]>>;
   updateChecklistItem(id: string, data: Partial<ChecklistItem>): Promise<ChecklistItem | undefined>;
   toggleChecklistItem(id: string): Promise<ChecklistItem | undefined>;
   deleteChecklistItem(id: string): Promise<void>;
@@ -126,6 +128,21 @@ export class DatabaseStorage implements IStorage {
       .from(analyticsImports)
       .where(eq(analyticsImports.userId, userId))
       .orderBy(sql`${analyticsImports.createdAt} DESC`);
+  }
+
+  async getAnalyticsImports(ids: string[]): Promise<Map<string, AnalyticsImport>> {
+    if (ids.length === 0) return new Map();
+
+    const results = await db
+      .select()
+      .from(analyticsImports)
+      .where(inArray(analyticsImports.id, ids));
+
+    const map = new Map<string, AnalyticsImport>();
+    for (const item of results) {
+      map.set(item.id, item);
+    }
+    return map;
   }
 
   async hasAnalyticsImports(userId: string): Promise<boolean> {
@@ -214,6 +231,25 @@ export class DatabaseStorage implements IStorage {
       .from(checklistItems)
       .where(eq(checklistItems.ideaId, ideaId))
       .orderBy(checklistItems.position);
+  }
+
+  async getChecklistItemsForIdeas(ideaIds: string[]): Promise<Map<string, ChecklistItem[]>> {
+    if (ideaIds.length === 0) return new Map();
+
+    const items = await db
+      .select()
+      .from(checklistItems)
+      .where(inArray(checklistItems.ideaId, ideaIds))
+      .orderBy(checklistItems.position);
+
+    const map = new Map<string, ChecklistItem[]>();
+    for (const item of items) {
+      if (!map.has(item.ideaId)) {
+        map.set(item.ideaId, []);
+      }
+      map.get(item.ideaId)!.push(item);
+    }
+    return map;
   }
 
   async updateChecklistItem(id: string, data: Partial<ChecklistItem>): Promise<ChecklistItem | undefined> {
