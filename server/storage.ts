@@ -44,6 +44,7 @@ export interface IStorage {
 
   // Checklist methods
   createChecklistItem(data: InsertChecklistItem): Promise<ChecklistItem>;
+  getChecklistItem(id: string): Promise<ChecklistItem | undefined>;
   getChecklistItems(ideaId: string): Promise<ChecklistItem[]>;
   updateChecklistItem(id: string, data: Partial<ChecklistItem>): Promise<ChecklistItem | undefined>;
   toggleChecklistItem(id: string): Promise<ChecklistItem | undefined>;
@@ -52,6 +53,7 @@ export interface IStorage {
 
   // Notification methods
   createNotification(data: InsertNotification): Promise<Notification>;
+  getNotification(id: string): Promise<Notification | undefined>;
   getNotifications(userId: string, unreadOnly?: boolean): Promise<Notification[]>;
   markNotificationRead(id: string): Promise<void>;
 
@@ -208,6 +210,14 @@ export class DatabaseStorage implements IStorage {
     return item;
   }
 
+  async getChecklistItem(id: string): Promise<ChecklistItem | undefined> {
+    const [item] = await db
+      .select()
+      .from(checklistItems)
+      .where(eq(checklistItems.id, id));
+    return item;
+  }
+
   async getChecklistItems(ideaId: string): Promise<ChecklistItem[]> {
     return db
       .select()
@@ -266,6 +276,14 @@ export class DatabaseStorage implements IStorage {
   // Notification methods
   async createNotification(data: InsertNotification): Promise<Notification> {
     const [notification] = await db.insert(notifications).values(data).returning();
+    return notification;
+  }
+
+  async getNotification(id: string): Promise<Notification | undefined> {
+    const [notification] = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.id, id));
     return notification;
   }
 
