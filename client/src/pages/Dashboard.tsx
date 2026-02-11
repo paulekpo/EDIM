@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Sparkles, Upload, Trophy, RefreshCw, CheckCircle, Target, Lightbulb, Rocket, ArrowUp, BarChart3, LogOut, User, ShieldCheck } from "lucide-react";
+import { Sparkles, Trophy, RefreshCw, CheckCircle, Lightbulb, Rocket, ArrowUp, BarChart3, LogOut, User, ShieldCheck } from "lucide-react";
 
 interface ChecklistItemData {
   id: string;
