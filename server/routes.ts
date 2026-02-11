@@ -321,10 +321,15 @@ Return only valid JSON, no markdown.`,
   });
 
   // GET /api/ideas/:id - Get single idea with checklist
-  app.get("/api/ideas/:id", async (req, res) => {
+  app.get("/api/ideas/:id", isAuthenticated, async (req, res) => {
     try {
-      const idea = await storage.getIdea(req.params.id);
+      const userId = getUserId(req);
+      const idea = await storage.getIdea(req.params.id as string);
       if (!idea) {
+        return res.status(404).json({ error: "Idea not found" });
+      }
+
+      if (idea.userId !== userId) {
         return res.status(404).json({ error: "Idea not found" });
       }
 
