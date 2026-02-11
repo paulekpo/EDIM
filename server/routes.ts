@@ -386,18 +386,23 @@ Return only valid JSON, no markdown.`,
   // ============ Checklist Endpoints ============
 
   // POST /api/ideas/:ideaId/checklist - Add new checklist item
-  app.post("/api/ideas/:ideaId/checklist", async (req, res) => {
+  app.post("/api/ideas/:ideaId/checklist", isAuthenticated, async (req, res) => {
     try {
-      const idea = await storage.getIdea(req.params.ideaId);
+      const userId = getUserId(req);
+      const idea = await storage.getIdea(req.params.ideaId as string);
       if (!idea) {
         return res.status(404).json({ error: "Idea not found" });
       }
 
-      const existingItems = await storage.getChecklistItems(req.params.ideaId);
+      if (idea.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      const existingItems = await storage.getChecklistItems(req.params.ideaId as string);
       const position = existingItems.length;
 
       const item = await storage.createChecklistItem({
-        ideaId: req.params.ideaId,
+        ideaId: req.params.ideaId as string,
         text: req.body.text,
         isChecked: false,
         isDefault: false,
@@ -412,8 +417,19 @@ Return only valid JSON, no markdown.`,
   });
 
   // PATCH /api/checklist/:id - Update item text and/or checked state
-  app.patch("/api/checklist/:id", async (req, res) => {
+  app.patch("/api/checklist/:id", isAuthenticated, async (req, res) => {
     try {
+      const userId = getUserId(req);
+      const item = await storage.getChecklistItem(req.params.id as string);
+      if (!item) {
+        return res.status(404).json({ error: "Checklist item not found" });
+      }
+
+      const idea = await storage.getIdea(item.ideaId);
+      if (!idea || idea.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
       const updateData: { text?: string; isChecked?: boolean } = {};
       if (req.body.text !== undefined) {
         updateData.text = req.body.text;
@@ -421,7 +437,7 @@ Return only valid JSON, no markdown.`,
       if (req.body.isChecked !== undefined) {
         updateData.isChecked = req.body.isChecked;
       }
-      const updatedItem = await storage.updateChecklistItem(req.params.id, updateData);
+      const updatedItem = await storage.updateChecklistItem(req.params.id as string, updateData);
       if (!updatedItem) {
         return res.status(404).json({ error: "Checklist item not found" });
       }
@@ -436,7 +452,17 @@ Return only valid JSON, no markdown.`,
   app.patch("/api/checklist/:id/toggle", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const updatedItem = await storage.toggleChecklistItem(req.params.id);
+      const item = await storage.getChecklistItem(req.params.id as string);
+      if (!item) {
+        return res.status(404).json({ error: "Checklist item not found" });
+      }
+
+      const idea = await storage.getIdea(item.ideaId);
+      if (!idea || idea.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      const updatedItem = await storage.toggleChecklistItem(req.params.id as string);
       if (!updatedItem) {
         return res.status(404).json({ error: "Checklist item not found" });
       }
@@ -518,9 +544,20 @@ Return only valid JSON, no markdown.`,
   });
 
   // DELETE /api/checklist/:id - Delete item
-  app.delete("/api/checklist/:id", async (req, res) => {
+  app.delete("/api/checklist/:id", isAuthenticated, async (req, res) => {
     try {
-      await storage.deleteChecklistItem(req.params.id);
+      const userId = getUserId(req);
+      const item = await storage.getChecklistItem(req.params.id as string);
+      if (!item) {
+        return res.status(404).json({ error: "Checklist item not found" });
+      }
+
+      const idea = await storage.getIdea(item.ideaId);
+      if (!idea || idea.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      await storage.deleteChecklistItem(req.params.id as string);
       res.status(204).send();
     } catch (error) {
       console.error("Delete checklist item error:", error);
