@@ -16,15 +16,6 @@ import OpenAI from "openai";
 import { generateIdeas, checkDuplicates, type AnalyticsData } from "./services/aiService";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
-import rateLimit from "express-rate-limit";
-
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  message: "Too many requests from this IP, please try again after 15 minutes",
-});
 
 function getUserId(req: any): string {
   return req.user?.claims?.sub;
@@ -72,9 +63,6 @@ export async function registerRoutes(
   // Setup authentication BEFORE other routes
   await setupAuth(app);
   registerAuthRoutes(app);
-
-  // Apply rate limiting to all API routes
-  app.use("/api", limiter);
 
   // Register object storage routes for file uploads
   registerObjectStorageRoutes(app);
@@ -198,7 +186,7 @@ Return only valid JSON, no markdown.`,
   app.get("/api/analytics/:id", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const analyticsImport = await storage.getAnalyticsImportForUser(req.params.id as string, userId);
+      const analyticsImport = await storage.getAnalyticsImportForUser(req.params.id, userId);
       if (!analyticsImport) {
         return res.status(404).json({ error: "Analytics import not found" });
       }
