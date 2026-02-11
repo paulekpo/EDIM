@@ -45,6 +45,7 @@ export interface IStorage {
   // Checklist methods
   createChecklistItem(data: InsertChecklistItem): Promise<ChecklistItem>;
   getChecklistItems(ideaId: string): Promise<ChecklistItem[]>;
+  getChecklistItem(id: string): Promise<ChecklistItem | undefined>;
   updateChecklistItem(id: string, data: Partial<ChecklistItem>): Promise<ChecklistItem | undefined>;
   toggleChecklistItem(id: string): Promise<ChecklistItem | undefined>;
   deleteChecklistItem(id: string): Promise<void>;
@@ -214,6 +215,14 @@ export class DatabaseStorage implements IStorage {
       .from(checklistItems)
       .where(eq(checklistItems.ideaId, ideaId))
       .orderBy(checklistItems.position);
+  }
+
+  async getChecklistItem(id: string): Promise<ChecklistItem | undefined> {
+    const [item] = await db
+      .select()
+      .from(checklistItems)
+      .where(eq(checklistItems.id, id));
+    return item;
   }
 
   async updateChecklistItem(id: string, data: Partial<ChecklistItem>): Promise<ChecklistItem | undefined> {
