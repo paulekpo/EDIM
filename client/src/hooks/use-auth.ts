@@ -2,6 +2,20 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@shared/models/auth";
 import { useToast } from "@/hooks/use-toast";
 
+function getCsrfToken() {
+  const match = document.cookie.match(new RegExp('(^| )X-CSRF-Token=([^;]+)'));
+  return match ? match[2] : null;
+}
+
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const csrfToken = getCsrfToken();
+  if (csrfToken) {
+    headers["X-CSRF-Token"] = csrfToken;
+  }
+  return headers;
+}
+
 async function fetchUser(): Promise<User | null> {
   const response = await fetch("/api/auth/user");
 
@@ -19,9 +33,7 @@ async function fetchUser(): Promise<User | null> {
 async function login(credentials: Record<string, string>): Promise<User> {
   const response = await fetch("/api/login", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify(credentials),
   });
 
@@ -36,9 +48,7 @@ async function login(credentials: Record<string, string>): Promise<User> {
 async function register(credentials: Record<string, string>): Promise<User> {
   const response = await fetch("/api/register", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify(credentials),
   });
 
@@ -53,6 +63,7 @@ async function register(credentials: Record<string, string>): Promise<User> {
 async function logout(): Promise<void> {
   const response = await fetch("/api/logout", {
     method: "POST",
+    headers: getAuthHeaders(),
   });
   if (!response.ok) {
     throw new Error("Logout failed");

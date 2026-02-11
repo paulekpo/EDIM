@@ -18,38 +18,25 @@ interface UseUploadOptions {
   onError?: (error: Error) => void;
 }
 
+function getCsrfToken() {
+  const match = document.cookie.match(new RegExp('(^| )X-CSRF-Token=([^;]+)'));
+  return match ? match[2] : null;
+}
+
+function getHeaders(contentType?: string): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (contentType) {
+    headers["Content-Type"] = contentType;
+  }
+  const csrfToken = getCsrfToken();
+  if (csrfToken) {
+    headers["X-CSRF-Token"] = csrfToken;
+  }
+  return headers;
+}
+
 /**
  * React hook for handling file uploads with presigned URLs.
- *
- * This hook implements the two-step presigned URL upload flow:
- * 1. Request a presigned URL from your backend (sends JSON metadata, NOT the file)
- * 2. Upload the file directly to the presigned URL
- *
- * @example
- * ```tsx
- * function FileUploader() {
- *   const { uploadFile, isUploading, error } = useUpload({
- *     onSuccess: (response) => {
- *       console.log("Uploaded to:", response.objectPath);
- *     },
- *   });
- *
- *   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
- *     const file = e.target.files?.[0];
- *     if (file) {
- *       await uploadFile(file);
- *     }
- *   };
- *
- *   return (
- *     <div>
- *       <input type="file" onChange={handleFileChange} disabled={isUploading} />
- *       {isUploading && <p>Uploading...</p>}
- *       {error && <p>Error: {error.message}</p>}
- *     </div>
- *   );
- * }
- * ```
  */
 export function useUpload(options: UseUploadOptions = {}) {
   const [isUploading, setIsUploading] = useState(false);
@@ -64,9 +51,7 @@ export function useUpload(options: UseUploadOptions = {}) {
     async (file: File): Promise<UploadResponse> => {
       const response = await fetch("/api/uploads/request-url", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: getHeaders("application/json"),
         body: JSON.stringify({
           name: file.name,
           size: file.size,
@@ -86,15 +71,32 @@ export function useUpload(options: UseUploadOptions = {}) {
 
   /**
    * Upload a file directly to the presigned URL.
+   * Note: The upload URL for local storage is an API endpoint, so it might be subject to CSRF checks if it were a standard route.
+   * However, the PUT to /api/uploads/file/:filename is a state-changing operation.
+   * Since it's a direct upload to a "presigned" URL (which is just an API endpoint in our local impl),
+   * we should include the CSRF token if it's hitting our backend.
    */
   const uploadToPresignedUrl = useCallback(
     async (file: File, uploadURL: string): Promise<void> => {
+      // Check if the URL is relative (our backend) or absolute (external, like S3/GCS)
+      // Our local implementation returns relative URLs starting with /api
+      const isLocal = uploadURL.startsWith("/");
+
+      const headers: Record<string, string> = {
+        "Content-Type": file.type || "application/octet-stream",
+      };
+
+      if (isLocal) {
+        const csrfToken = getCsrfToken();
+        if (csrfToken) {
+          headers["X-CSRF-Token"] = csrfToken;
+        }
+      }
+
       const response = await fetch(uploadURL, {
         method: "PUT",
         body: file,
-        headers: {
-          "Content-Type": file.type || "application/octet-stream",
-        },
+        headers,
       });
 
       if (!response.ok) {
@@ -142,16 +144,6 @@ export function useUpload(options: UseUploadOptions = {}) {
 
   /**
    * Get upload parameters for Uppy's AWS S3 plugin.
-   *
-   * IMPORTANT: This function receives the UppyFile object from Uppy.
-   * Use file.name, file.size, file.type to request per-file presigned URLs.
-   *
-   * Use this with the ObjectUploader component:
-   * ```tsx
-   * <ObjectUploader onGetUploadParameters={getUploadParameters}>
-   *   Upload
-   * </ObjectUploader>
-   * ```
    */
   const getUploadParameters = useCallback(
     async (
@@ -164,9 +156,7 @@ export function useUpload(options: UseUploadOptions = {}) {
       // Use the actual file properties to request a per-file presigned URL
       const response = await fetch("/api/uploads/request-url", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: getHeaders("application/json"),
         body: JSON.stringify({
           name: file.name,
           size: file.size,
@@ -179,10 +169,23 @@ export function useUpload(options: UseUploadOptions = {}) {
       }
 
       const data = await response.json();
+
+      // If local, we need to pass CSRF token in headers for the PUT request too
+      const headers: Record<string, string> = {
+        "Content-Type": file.type || "application/octet-stream"
+      };
+
+      if (data.uploadURL.startsWith("/")) {
+         const csrfToken = getCsrfToken();
+         if (csrfToken) {
+           headers["X-CSRF-Token"] = csrfToken;
+         }
+      }
+
       return {
         method: "PUT",
         url: data.uploadURL,
-        headers: { "Content-Type": file.type || "application/octet-stream" },
+        headers,
       };
     },
     []
@@ -196,4 +199,3 @@ export function useUpload(options: UseUploadOptions = {}) {
     progress,
   };
 }
-

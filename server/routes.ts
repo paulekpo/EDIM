@@ -8,6 +8,7 @@ import { registerStorageRoutes, storageService } from "./services/storageService
 import { setupAuth, hashPassword } from "./auth";
 import passport from "passport";
 import rateLimit from "express-rate-limit";
+import { csrfMiddleware } from "./middleware/csrf";
 
 function getUserId(req: any): string {
   // req.user is the User object from deserializeUser
@@ -74,6 +75,9 @@ export async function registerRoutes(
 
   // Apply rate limiting globally to all API routes
   app.use("/api", apiLimiter);
+
+  // Apply CSRF middleware to all API routes
+  app.use("/api", csrfMiddleware);
 
   // Register local storage routes
   registerStorageRoutes(app);
