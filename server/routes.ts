@@ -331,7 +331,7 @@ Return only valid JSON, no markdown.`,
   });
 
   // GET /api/ideas/:id - Get single idea with checklist
-  app.get("/api/ideas/:id", isAuthenticated, ideaRateLimiter, async (req, res) => {
+  app.get("/api/ideas/:id", ideaRateLimiter, isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
       const idea = await storage.getIdea(req.params.id as string);
