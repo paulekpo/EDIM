@@ -14,6 +14,8 @@ import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { Lightbulb } from "lucide-react";
+import { useEffect } from "react";
+import { setCsrfToken } from "./lib/queryClient";
 
 function AuthenticatedRouter() {
   return (
@@ -31,6 +33,18 @@ function AuthenticatedRouter() {
 
 function AppContent() {
   const { isLoading, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    // Fetch CSRF token and set it in the query client
+    fetch("/api/csrf-token")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.csrfToken) {
+          setCsrfToken(data.csrfToken);
+        }
+      })
+      .catch((err) => console.error("Failed to fetch CSRF token", err));
+  }, []);
 
   if (isLoading) {
     return (

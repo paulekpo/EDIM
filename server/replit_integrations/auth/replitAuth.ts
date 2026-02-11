@@ -6,6 +6,8 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
+import csurf from "csurf";
+import cookieParser from "cookie-parser";
 import { authStorage } from "./storage";
 
 const getOidcConfig = memoize(
@@ -65,6 +67,21 @@ export async function setupAuth(app: Express) {
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
+
+  // CSRF Protection
+  app.use(cookieParser());
+  app.use(csurf({ cookie: true }));
+
+  // Expose CSRF token to client
+  app.get("/api/csrf-token", (req, res) => {
+    res.json({ csrfToken: req.csrfToken() });
+  });
+
+  // CSRF Error Handler
+  app.use((err: any, req: any, res: any, next: any) => {
+    if (err.code !== "EBADCSRFTOKEN") return next(err);
+    res.status(403).json({ error: "Invalid CSRF token" });
+  });
 
   const config = await getOidcConfig();
 

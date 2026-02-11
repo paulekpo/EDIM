@@ -22,6 +22,9 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
+// Trust proxy for rate limiting (assuming standard reverse proxy setup)
+app.set('trust proxy', 1);
+
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
