@@ -148,17 +148,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getIdeasByUser(userId: string, status?: string): Promise<Idea[]> {
+    const conditions = [eq(ideas.userId, userId)];
     if (status) {
-      return db
-        .select()
-        .from(ideas)
-        .where(and(eq(ideas.userId, userId), eq(ideas.status, status)))
-        .orderBy(sql`${ideas.createdAt} DESC`);
+      conditions.push(eq(ideas.status, status));
     }
+
     return db
       .select()
       .from(ideas)
-      .where(eq(ideas.userId, userId))
+      .where(and(...conditions))
       .orderBy(sql`${ideas.createdAt} DESC`);
   }
 
@@ -270,17 +268,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getNotifications(userId: string, unreadOnly?: boolean): Promise<Notification[]> {
+    const conditions = [eq(notifications.userId, userId)];
     if (unreadOnly) {
-      return db
-        .select()
-        .from(notifications)
-        .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)))
-        .orderBy(sql`${notifications.createdAt} DESC`);
+      conditions.push(eq(notifications.isRead, false));
     }
+
     return db
       .select()
       .from(notifications)
-      .where(eq(notifications.userId, userId))
+      .where(and(...conditions))
       .orderBy(sql`${notifications.createdAt} DESC`);
   }
 
