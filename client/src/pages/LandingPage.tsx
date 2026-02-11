@@ -14,7 +14,7 @@ export default function LandingPage() {
               <span className="text-xs text-muted-foreground">Entertainment Data to Idea Management</span>
             </div>
           </div>
-          <a href="/api/login">
+          <a href="/auth">
             <Button data-testid="button-login">Sign In</Button>
           </a>
         </header>
@@ -29,7 +29,7 @@ export default function LandingPage() {
               EDIM helps content creators transform their channel analytics into actionable video ideas. 
               Spin the wheel, track your progress, and level up your content game.
             </p>
-            <a href="/api/login">
+            <a href="/auth">
               <Button size="lg" className="gap-2" data-testid="button-get-started">
                 Get Started <ArrowRight className="w-4 h-4" />
               </Button>

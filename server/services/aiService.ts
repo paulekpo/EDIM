@@ -1,8 +1,9 @@
 import OpenAI from "openai";
+import { Buffer } from "node:buffer";
 
+// Use standard OpenAI API key
 const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 export interface GeneratedIdea {
@@ -14,6 +15,24 @@ export interface GeneratedIdea {
 export interface AnalyticsData {
   trafficSources: Record<string, number>;
   searchQueries: string[];
+}
+
+/**
+ * Generate an image and return as Buffer.
+ * Uses dall-e-3 model.
+ */
+export async function generateImageBuffer(
+  prompt: string,
+  size: "1024x1024" = "1024x1024"
+): Promise<Buffer> {
+  const response = await openai.images.generate({
+    model: "dall-e-3",
+    prompt,
+    size,
+    response_format: "b64_json",
+  });
+  const base64 = response.data?.[0]?.b64_json ?? "";
+  return Buffer.from(base64, "base64");
 }
 
 function levenshteinDistance(a: string, b: string): number {
@@ -235,7 +254,7 @@ Return ONLY a valid JSON object with this structure:
 
   const response = await retryWithBackoff(async () => {
     const completion = await openai.chat.completions.create({
-      model: "gpt-5.1",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
@@ -282,7 +301,7 @@ export async function analyzeScreenshot(
 
   const response = await retryWithBackoff(async () => {
     const completion = await openai.chat.completions.create({
-      model: "gpt-5.1",
+      model: "gpt-4o",
       messages: [
         {
           role: "user",

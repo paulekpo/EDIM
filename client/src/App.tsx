@@ -10,6 +10,7 @@ import CompletedProjects from "@/pages/CompletedProjects";
 import AdminDashboard from "@/pages/AdminDashboard";
 import ProfilePage from "@/pages/ProfilePage";
 import LandingPage from "@/pages/LandingPage";
+import AuthPage from "@/pages/AuthPage";
 import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InstallPrompt } from "@/components/InstallPrompt";
@@ -46,7 +47,12 @@ function AppContent() {
   }
 
   if (!isAuthenticated) {
-    return <LandingPage />;
+    return (
+      <Switch>
+        <Route path="/auth" component={AuthPage} />
+        <Route component={LandingPage} />
+      </Switch>
+    );
   }
 
   return <AuthenticatedRouter />;

@@ -1,24 +1,23 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { db } from "./db";
-import { sql } from "drizzle-orm";
-import {
-  insertAnalyticsImportSchema,
-  insertIdeaSchema,
-  insertChecklistItemSchema,
-  insertNotificationSchema,
-  ideas,
-  users,
-} from "@shared/schema";
+import { insertAnalyticsImportSchema } from "@shared/schema";
 import { z } from "zod";
-import OpenAI from "openai";
-import { generateIdeas, checkDuplicates, type AnalyticsData } from "./services/aiService";
-import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
-import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { generateIdeas, checkDuplicates, analyzeScreenshot, type AnalyticsData } from "./services/aiService";
+import { registerStorageRoutes, storageService } from "./services/storageService";
+import { setupAuth, hashPassword } from "./auth";
+import passport from "passport";
 
 function getUserId(req: any): string {
-  return req.user?.claims?.sub;
+  // req.user is the User object from deserializeUser
+  return req.user?.id;
+}
+
+function isAuthenticated(req: Request, res: Response, next: NextFunction) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ error: "Unauthorized" });
 }
 
 // Admin middleware - checks if user is authenticated and is an admin
@@ -35,11 +34,6 @@ async function isAdmin(req: Request, res: Response, next: NextFunction) {
   
   next();
 }
-
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
 
 const DEFAULT_CHECKLIST_ITEMS = [
   "Write script/outline",
@@ -61,13 +55,58 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   // Setup authentication BEFORE other routes
-  await setupAuth(app);
-  registerAuthRoutes(app);
+  setupAuth(app);
 
-  // Register object storage routes for file uploads
-  registerObjectStorageRoutes(app);
+  // Register local storage routes
+  registerStorageRoutes(app);
 
-  const objectStorageService = new ObjectStorageService();
+  // Auth Routes
+  app.post("/api/register", async (req, res, next) => {
+    try {
+      const existingUser = await storage.getUserByEmail(req.body.username);
+      if (existingUser) {
+        return res.status(400).json({ error: "User already exists" });
+      }
+
+      const hashedPassword = await hashPassword(req.body.password);
+      const user = await storage.createUser({
+        email: req.body.username,
+        password: hashedPassword,
+        firstName: "",
+        lastName: "",
+        profileImageUrl: "",
+        currentTier: "amateur",
+        tierProgress: 0,
+        isAdmin: false
+      });
+
+      req.login(user, (err) => {
+        if (err) return next(err);
+        res.status(201).json(user);
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/login", passport.authenticate("local"), (req, res) => {
+    res.json(req.user);
+  });
+
+  app.post("/api/logout", (req, res, next) => {
+    req.logout((err) => {
+      if (err) return next(err);
+      res.sendStatus(200);
+    });
+  });
+
+  app.get("/api/auth/user", (req, res) => {
+    if (req.isAuthenticated()) {
+      res.json(req.user);
+    } else {
+      res.status(401).json({ error: "Not authenticated" });
+    }
+  });
 
   // ============ Analytics Endpoints ============
 
@@ -81,61 +120,17 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Object path is required. Upload image first via /api/uploads/request-url" });
       }
 
-      // Get the image from object storage
-      const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
+      // Get the image from storage service
+      const objectFile = await storageService.getObjectEntityFile(objectPath);
       const [imageBuffer] = await objectFile.download();
       const imageBase64 = imageBuffer.toString("base64");
-      const [metadata] = await objectFile.getMetadata();
-      const contentType = metadata.contentType || "image/png";
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-5.2",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `Analyze this TikTok analytics screenshot and extract the following data in JSON format:
-{
-  "trafficSources": {
-    "forYouPage": number (percentage),
-    "following": number (percentage),
-    "search": number (percentage),
-    "sound": number (percentage),
-    "hashtag": number (percentage),
-    "other": number (percentage)
-  },
-  "searchQueries": string[] (top search terms if visible),
-  "views": number (total views if visible),
-  "likes": number (if visible),
-  "comments": number (if visible),
-  "shares": number (if visible)
-}
-Return only valid JSON, no markdown.`,
-              },
-              {
-                type: "image_url",
-                image_url: { url: `data:${contentType};base64,${imageBase64}` },
-              },
-            ],
-          },
-        ],
-        max_completion_tokens: 1000,
-      });
-
-      const content = response.choices[0]?.message?.content || "{}";
-      let parsedData;
-      try {
-        parsedData = JSON.parse(content);
-      } catch {
-        parsedData = { trafficSources: {}, searchQueries: [] };
-      }
+      const analyticsData = await analyzeScreenshot(imageBase64);
 
       const analyticsImport = await storage.createAnalyticsImport({
         userId,
-        trafficSources: parsedData.trafficSources || {},
-        searchQueries: parsedData.searchQueries || [],
+        trafficSources: analyticsData.trafficSources,
+        searchQueries: analyticsData.searchQueries,
         rawImageUrl: imageBase64.substring(0, 100),
       });
 
@@ -186,7 +181,7 @@ Return only valid JSON, no markdown.`,
   app.get("/api/analytics/:id", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const analyticsImport = await storage.getAnalyticsImportForUser(req.params.id, userId);
+      const analyticsImport = await storage.getAnalyticsImportForUser(req.params.id as string, userId);
       if (!analyticsImport) {
         return res.status(404).json({ error: "Analytics import not found" });
       }
@@ -323,7 +318,7 @@ Return only valid JSON, no markdown.`,
   // GET /api/ideas/:id - Get single idea with checklist
   app.get("/api/ideas/:id", async (req, res) => {
     try {
-      const idea = await storage.getIdea(req.params.id);
+      const idea = await storage.getIdea(req.params.id as string);
       if (!idea) {
         return res.status(404).json({ error: "Idea not found" });
       }
@@ -352,12 +347,12 @@ Return only valid JSON, no markdown.`,
   app.patch("/api/ideas/:id", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const idea = await storage.getIdea(req.params.id);
+      const idea = await storage.getIdea(req.params.id as string);
       if (!idea) {
         return res.status(404).json({ error: "Idea not found" });
       }
 
-      const updatedIdea = await storage.updateIdea(req.params.id, req.body);
+      const updatedIdea = await storage.updateIdea(req.params.id as string, req.body);
       await storage.updateUserActivity(userId);
 
       res.json(updatedIdea);
@@ -370,12 +365,12 @@ Return only valid JSON, no markdown.`,
   // DELETE /api/ideas/:id - Delete idea
   app.delete("/api/ideas/:id", async (req, res) => {
     try {
-      const idea = await storage.getIdea(req.params.id);
+      const idea = await storage.getIdea(req.params.id as string);
       if (!idea) {
         return res.status(404).json({ error: "Idea not found" });
       }
 
-      await storage.deleteIdea(req.params.id);
+      await storage.deleteIdea(req.params.id as string);
       res.status(204).send();
     } catch (error) {
       console.error("Delete idea error:", error);
@@ -388,16 +383,16 @@ Return only valid JSON, no markdown.`,
   // POST /api/ideas/:ideaId/checklist - Add new checklist item
   app.post("/api/ideas/:ideaId/checklist", async (req, res) => {
     try {
-      const idea = await storage.getIdea(req.params.ideaId);
+      const idea = await storage.getIdea(req.params.ideaId as string);
       if (!idea) {
         return res.status(404).json({ error: "Idea not found" });
       }
 
-      const existingItems = await storage.getChecklistItems(req.params.ideaId);
+      const existingItems = await storage.getChecklistItems(req.params.ideaId as string);
       const position = existingItems.length;
 
       const item = await storage.createChecklistItem({
-        ideaId: req.params.ideaId,
+        ideaId: req.params.ideaId as string,
         text: req.body.text,
         isChecked: false,
         isDefault: false,
@@ -421,7 +416,7 @@ Return only valid JSON, no markdown.`,
       if (req.body.isChecked !== undefined) {
         updateData.isChecked = req.body.isChecked;
       }
-      const updatedItem = await storage.updateChecklistItem(req.params.id, updateData);
+      const updatedItem = await storage.updateChecklistItem(req.params.id as string, updateData);
       if (!updatedItem) {
         return res.status(404).json({ error: "Checklist item not found" });
       }
@@ -436,7 +431,7 @@ Return only valid JSON, no markdown.`,
   app.patch("/api/checklist/:id/toggle", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const updatedItem = await storage.toggleChecklistItem(req.params.id);
+      const updatedItem = await storage.toggleChecklistItem(req.params.id as string);
       if (!updatedItem) {
         return res.status(404).json({ error: "Checklist item not found" });
       }
@@ -520,7 +515,7 @@ Return only valid JSON, no markdown.`,
   // DELETE /api/checklist/:id - Delete item
   app.delete("/api/checklist/:id", async (req, res) => {
     try {
-      await storage.deleteChecklistItem(req.params.id);
+      await storage.deleteChecklistItem(req.params.id as string);
       res.status(204).send();
     } catch (error) {
       console.error("Delete checklist item error:", error);
@@ -563,7 +558,7 @@ Return only valid JSON, no markdown.`,
   app.post("/api/ideas/:id/complete", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const idea = await storage.getIdea(req.params.id);
+      const idea = await storage.getIdea(req.params.id as string);
       if (!idea) {
         return res.status(404).json({ error: "Idea not found" });
       }
@@ -580,7 +575,7 @@ Return only valid JSON, no markdown.`,
         });
       }
 
-      const uncheckedCount = await storage.countUncheckedItems(req.params.id);
+      const uncheckedCount = await storage.countUncheckedItems(req.params.id as string);
       if (uncheckedCount > 0) {
         return res.status(400).json({
           error: "Cannot complete idea with unchecked items",
@@ -596,7 +591,7 @@ Return only valid JSON, no markdown.`,
       const currentTier = user.currentTier || "amateur";
       const completedInTier = await storage.countCompletedIdeasInTier(userId, currentTier);
 
-      await storage.updateIdea(req.params.id, {
+      await storage.updateIdea(req.params.id as string, {
         status: "completed",
         completedAt: new Date(),
         tierCompletedIn: currentTier,
@@ -670,7 +665,7 @@ Return only valid JSON, no markdown.`,
   // PATCH /api/notifications/:id/read - Mark as read
   app.patch("/api/notifications/:id/read", async (req, res) => {
     try {
-      await storage.markNotificationRead(req.params.id);
+      await storage.markNotificationRead(req.params.id as string);
       res.json({ success: true });
     } catch (error) {
       console.error("Mark notification read error:", error);
@@ -709,7 +704,7 @@ Return only valid JSON, no markdown.`,
       if (typeof makeAdmin !== "boolean") {
         return res.status(400).json({ error: "isAdmin must be a boolean" });
       }
-      const user = await storage.setUserAdmin(req.params.id, makeAdmin);
+      const user = await storage.setUserAdmin(req.params.id as string, makeAdmin);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
