@@ -352,12 +352,17 @@ Return only valid JSON, no markdown.`,
   app.patch("/api/ideas/:id", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const idea = await storage.getIdea(req.params.id);
+      const ideaId = req.params.id as string;
+      const idea = await storage.getIdea(ideaId);
       if (!idea) {
         return res.status(404).json({ error: "Idea not found" });
       }
 
-      const updatedIdea = await storage.updateIdea(req.params.id, req.body);
+      if (idea.userId !== userId) {
+        return res.status(404).json({ error: "Idea not found" });
+      }
+
+      const updatedIdea = await storage.updateIdea(ideaId, req.body);
       await storage.updateUserActivity(userId);
 
       res.json(updatedIdea);
