@@ -53,7 +53,7 @@ export interface IStorage {
   // Notification methods
   createNotification(data: InsertNotification): Promise<Notification>;
   getNotifications(userId: string, unreadOnly?: boolean): Promise<Notification[]>;
-  markNotificationRead(id: string): Promise<void>;
+  markNotificationRead(id: string, userId: string): Promise<Notification | undefined>;
 
   // Admin methods
   getAllUsers(): Promise<User[]>;
@@ -284,11 +284,13 @@ export class DatabaseStorage implements IStorage {
       .orderBy(sql`${notifications.createdAt} DESC`);
   }
 
-  async markNotificationRead(id: string): Promise<void> {
-    await db
+  async markNotificationRead(id: string, userId: string): Promise<Notification | undefined> {
+    const [notification] = await db
       .update(notifications)
       .set({ isRead: true })
-      .where(eq(notifications.id, id));
+      .where(and(eq(notifications.id, id), eq(notifications.userId, userId)))
+      .returning();
+    return notification;
   }
 
   // Admin methods

@@ -668,9 +668,15 @@ Return only valid JSON, no markdown.`,
   });
 
   // PATCH /api/notifications/:id/read - Mark as read
-  app.patch("/api/notifications/:id/read", async (req, res) => {
+  app.patch("/api/notifications/:id/read", isAuthenticated, async (req, res) => {
     try {
-      await storage.markNotificationRead(req.params.id);
+      const userId = getUserId(req);
+      const notification = await storage.markNotificationRead(req.params.id, userId);
+
+      if (!notification) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+
       res.json({ success: true });
     } catch (error) {
       console.error("Mark notification read error:", error);
