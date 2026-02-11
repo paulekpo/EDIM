@@ -1,4 +1,5 @@
 import { File } from "@google-cloud/storage";
+import { storage } from "../../storage";
 
 const ACL_POLICY_METADATA_KEY = "custom:aclPolicy";
 
@@ -12,7 +13,10 @@ const ACL_POLICY_METADATA_KEY = "custom:aclPolicy";
 // - GROUP_MEMBER: the users who are members of a specific group;
 // - SUBSCRIBER: the users who are subscribers of a specific service / content
 //   creator.
-export enum ObjectAccessGroupType {}
+export enum ObjectAccessGroupType {
+  USER_LIST = "USER_LIST",
+  EMAIL_DOMAIN = "EMAIL_DOMAIN",
+}
 
 // The logic user group that can access the object.
 export interface ObjectAccessGroup {
@@ -82,17 +86,44 @@ abstract class BaseObjectAccessGroup implements ObjectAccessGroup {
   public abstract hasMember(userId: string): Promise<boolean>;
 }
 
-function createObjectAccessGroup(
+export class UserListAccessGroup extends BaseObjectAccessGroup {
+  private userIds: string[];
+
+  constructor(id: string) {
+    super(ObjectAccessGroupType.USER_LIST, id);
+    this.userIds = id.split(",").map((id) => id.trim());
+  }
+
+  // Check if the user is a member of the group.
+  public async hasMember(userId: string): Promise<boolean> {
+    return this.userIds.includes(userId);
+  }
+}
+
+export class EmailDomainAccessGroup extends BaseObjectAccessGroup {
+  constructor(id: string) {
+    super(ObjectAccessGroupType.EMAIL_DOMAIN, id);
+  }
+
+  // Check if the user is a member of the group.
+  public async hasMember(userId: string): Promise<boolean> {
+    const user = await storage.getUser(userId);
+    if (!user || !user.email) {
+      return false;
+    }
+    return user.email.endsWith(`@${this.id}`);
+  }
+}
+
+export function createObjectAccessGroup(
   group: ObjectAccessGroup,
 ): BaseObjectAccessGroup {
   switch (group.type) {
     // Implement the case for each type of access group to instantiate.
-    //
-    // For example:
-    // case "USER_LIST":
-    //   return new UserListAccessGroup(group.id);
-    // case "EMAIL_DOMAIN":
-    //   return new EmailDomainAccessGroup(group.id);
+    case ObjectAccessGroupType.USER_LIST:
+      return new UserListAccessGroup(group.id);
+    case ObjectAccessGroupType.EMAIL_DOMAIN:
+      return new EmailDomainAccessGroup(group.id);
     // case "GROUP_MEMBER":
     //   return new GroupMemberAccessGroup(group.id);
     // case "SUBSCRIBER":
