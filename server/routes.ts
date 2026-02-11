@@ -386,11 +386,16 @@ Return only valid JSON, no markdown.`,
   // ============ Checklist Endpoints ============
 
   // POST /api/ideas/:ideaId/checklist - Add new checklist item
-  app.post("/api/ideas/:ideaId/checklist", async (req, res) => {
+  app.post("/api/ideas/:ideaId/checklist", isAuthenticated, async (req, res) => {
     try {
+      const userId = getUserId(req);
       const idea = await storage.getIdea(req.params.ideaId);
       if (!idea) {
         return res.status(404).json({ error: "Idea not found" });
+      }
+
+      if (idea.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized" });
       }
 
       const existingItems = await storage.getChecklistItems(req.params.ideaId);
