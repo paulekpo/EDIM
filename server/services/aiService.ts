@@ -16,41 +16,52 @@ export interface AnalyticsData {
   searchQueries: string[];
 }
 
-function levenshteinDistance(a: string, b: string): number {
-  const matrix: number[][] = [];
+function levenshteinDistance(
+  a: string,
+  b: string,
+  maxDist?: number
+): number {
+  if (a === b) return 0;
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
 
-  for (let i = 0; i <= b.length; i++) {
-    matrix[i] = [i];
+  if (a.length > b.length) {
+    [a, b] = [b, a];
   }
 
-  for (let j = 0; j <= a.length; j++) {
-    matrix[0][j] = j;
-  }
+  const al = a.length;
+  const bl = b.length;
 
-  for (let i = 1; i <= b.length; i++) {
-    for (let j = 1; j <= a.length; j++) {
-      if (b.charAt(i - 1) === a.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1];
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j] + 1
-        );
-      }
+  if (maxDist !== undefined && bl - al > maxDist) return maxDist + 1;
+
+  let prevRow = Array.from({ length: al + 1 }, (_, i) => i);
+  let currRow = new Array(al + 1).fill(0);
+
+  for (let i = 1; i <= bl; i++) {
+    currRow[0] = i;
+    let minInRow = i;
+
+    for (let j = 1; j <= al; j++) {
+      const cost = a[j - 1] === b[i - 1] ? 0 : 1;
+      const val = Math.min(
+        currRow[j - 1] + 1, // insertion
+        prevRow[j] + 1, // deletion
+        prevRow[j - 1] + cost // substitution
+      );
+      currRow[j] = val;
+      if (val < minInRow) minInRow = val;
     }
+
+    if (maxDist !== undefined && minInRow > maxDist) {
+      return maxDist + 1;
+    }
+
+    const temp = prevRow;
+    prevRow = currRow;
+    currRow = temp;
   }
 
-  return matrix[b.length][a.length];
-}
-
-function normalizedSimilarity(a: string, b: string): number {
-  const aLower = a.toLowerCase().trim();
-  const bLower = b.toLowerCase().trim();
-  const maxLen = Math.max(aLower.length, bLower.length);
-  if (maxLen === 0) return 1;
-  const distance = levenshteinDistance(aLower, bLower);
-  return (maxLen - distance) / maxLen;
+  return prevRow[al];
 }
 
 export function checkDuplicates(
@@ -58,12 +69,50 @@ export function checkDuplicates(
   previousTitles: string[],
   threshold: number = 0.85
 ): GeneratedIdea[] {
+  // Pre-process previous titles for O(1) lookups and efficient comparison
+  const processedPrevious = previousTitles.map((title) => {
+    const text = title.toLowerCase().trim();
+    return { text, length: text.length, original: title };
+  });
+
+  const previousTitlesSet = new Set(processedPrevious.map((p) => p.text));
+
   return newIdeas.filter((idea) => {
-    for (const prevTitle of previousTitles) {
-      const similarity = normalizedSimilarity(idea.title, prevTitle);
+    const ideaTitleLower = idea.title.toLowerCase().trim();
+    const ideaTitleLen = ideaTitleLower.length;
+
+    // 1. Exact match check (O(1))
+    if (previousTitlesSet.has(ideaTitleLower)) {
+      console.log(`Rejecting duplicate idea (exact match): "${idea.title}"`);
+      return false;
+    }
+
+    // 2. Fuzzy match check
+    for (const prev of processedPrevious) {
+      const maxLen = Math.max(ideaTitleLen, prev.length);
+      if (maxLen === 0) continue;
+
+      // Length pruning: if length difference is too big, similarity cannot exceed threshold
+      // similarity = (maxLen - distance) / maxLen
+      // Since distance >= abs(lenA - lenB), maximum possible similarity is (maxLen - abs(lenA - lenB)) / maxLen
+      const maxPossibleSimilarity =
+        (maxLen - Math.abs(ideaTitleLen - prev.length)) / maxLen;
+
+      if (maxPossibleSimilarity <= threshold) {
+        continue;
+      }
+
+      const maxDist = Math.floor(maxLen * (1 - threshold));
+      const distance = levenshteinDistance(
+        ideaTitleLower,
+        prev.text,
+        maxDist
+      );
+      const similarity = (maxLen - distance) / maxLen;
+
       if (similarity > threshold) {
         console.log(
-          `Rejecting duplicate idea: "${idea.title}" (${(similarity * 100).toFixed(1)}% similar to "${prevTitle}")`
+          `Rejecting duplicate idea: "${idea.title}" (${(similarity * 100).toFixed(1)}% similar to "${prev.original}")`
         );
         return false;
       }
