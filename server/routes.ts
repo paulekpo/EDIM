@@ -6,6 +6,7 @@ import { sql } from "drizzle-orm";
 import {
   insertAnalyticsImportSchema,
   insertIdeaSchema,
+  patchIdeaSchema,
   insertChecklistItemSchema,
   insertNotificationSchema,
   ideas,
@@ -357,11 +358,15 @@ Return only valid JSON, no markdown.`,
         return res.status(404).json({ error: "Idea not found" });
       }
 
-      const updatedIdea = await storage.updateIdea(req.params.id, req.body);
+      const validatedData = patchIdeaSchema.parse(req.body);
+      const updatedIdea = await storage.updateIdea(req.params.id as string, validatedData);
       await storage.updateUserActivity(userId);
 
       res.json(updatedIdea);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
       console.error("Update idea error:", error);
       res.status(500).json({ error: "Failed to update idea" });
     }
