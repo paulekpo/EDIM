@@ -36,6 +36,7 @@ export interface IStorage {
   // Ideas methods
   createIdea(data: InsertIdea): Promise<Idea>;
   getIdea(id: string): Promise<Idea | undefined>;
+  getIdeaTitlesByUser(userId: string): Promise<string[]>;
   getIdeasByUser(userId: string, status?: string): Promise<Idea[]>;
   getActiveIdeas(userId: string): Promise<Idea[]>;
   updateIdea(id: string, data: Partial<Idea>): Promise<Idea | undefined>;
@@ -145,6 +146,14 @@ export class DatabaseStorage implements IStorage {
   async getIdea(id: string): Promise<Idea | undefined> {
     const [idea] = await db.select().from(ideas).where(eq(ideas.id, id));
     return idea;
+  }
+
+  async getIdeaTitlesByUser(userId: string): Promise<string[]> {
+    const result = await db
+      .select({ title: ideas.title })
+      .from(ideas)
+      .where(eq(ideas.userId, userId));
+    return result.map((r) => r.title);
   }
 
   async getIdeasByUser(userId: string, status?: string): Promise<Idea[]> {

@@ -234,8 +234,7 @@ Return only valid JSON, no markdown.`,
         }
       }
 
-      const existingIdeas = await storage.getIdeasByUser(userId);
-      const previousTitles = existingIdeas.map((idea) => idea.title);
+      const previousTitles = await storage.getIdeaTitlesByUser(userId);
 
       const generatedIdeas = await generateIdeas(analyticsDataForAI, previousTitles);
       
