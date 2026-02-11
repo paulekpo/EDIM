@@ -33,9 +33,9 @@ export class LocalStorageService {
   normalizeObjectEntityPath(uploadURL: string): string {
     // extract the ID from the URL
     // URL: /api/uploads/file/<filename>
-    const match = uploadURL.match(/\/api\/uploads\/file\/(.+)$/);
-    if (match) {
-      return `/uploads/${match[1]}`;
+    const prefix = "/api/uploads/file/";
+    if (uploadURL.startsWith(prefix)) {
+      return `/uploads/${uploadURL.substring(prefix.length)}`;
     }
     return uploadURL;
   }
@@ -45,6 +45,11 @@ export class LocalStorageService {
     // We need to map this to filesystem path
     const filename = path.basename(objectPath);
     const filePath = path.join(UPLOADS_DIR, filename);
+
+    // Prevent directory traversal
+    if (!filePath.startsWith(UPLOADS_DIR)) {
+      throw new ObjectNotFoundError();
+    }
 
     if (!fs.existsSync(filePath)) {
       throw new ObjectNotFoundError();
@@ -66,7 +71,14 @@ export class LocalStorageService {
   }
 
   async uploadFile(filename: string, req: Request): Promise<void> {
-    const filePath = path.join(UPLOADS_DIR, filename);
+    const safeFilename = path.basename(filename);
+    const filePath = path.join(UPLOADS_DIR, safeFilename);
+
+    // Prevent directory traversal
+    if (!filePath.startsWith(UPLOADS_DIR)) {
+      throw new Error("Invalid file path");
+    }
+
     const writeStream = createWriteStream(filePath);
     await pipeline(req, writeStream);
   }
