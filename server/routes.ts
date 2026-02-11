@@ -72,10 +72,18 @@ export async function registerRoutes(
   // Setup authentication BEFORE other routes
   setupAuth(app);
 
+  // Apply rate limiting globally to all API routes
+  app.use("/api", apiLimiter);
+
   // Register local storage routes
   registerStorageRoutes(app);
 
   // Auth Routes
+  // authLimiter is stricter, so we apply it specifically here.
+  // Since we have global apiLimiter, these routes will technically go through both if not carefully ordered,
+  // but express-rate-limit headers might conflict or just stack.
+  // Ideally, specific routes override or we accept the stricter limit applies.
+  // The global limiter allows 100, auth allows 10. The authLimiter will reject first if hit.
   app.post("/api/register", authLimiter, async (req, res, next) => {
     try {
       const existingUser = await storage.getUserByEmail(req.body.username);
@@ -126,7 +134,8 @@ export async function registerRoutes(
   // ============ Analytics Endpoints ============
 
   // POST /api/analytics/upload - Process uploaded screenshot for OCR
-  app.post("/api/analytics/upload", isAuthenticated, apiLimiter, async (req, res) => {
+  // Removed redundant apiLimiter middleware since it's global now
+  app.post("/api/analytics/upload", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
       const { objectPath } = req.body;
@@ -159,7 +168,7 @@ export async function registerRoutes(
   });
 
   // POST /api/analytics/manual - Manual analytics entry
-  app.post("/api/analytics/manual", isAuthenticated, apiLimiter, async (req, res) => {
+  app.post("/api/analytics/manual", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
       const validatedData = insertAnalyticsImportSchema.parse({
@@ -181,7 +190,7 @@ export async function registerRoutes(
   });
 
   // GET /api/analytics/exists - Check if any analytics imports exist
-  app.get("/api/analytics/exists", isAuthenticated, apiLimiter, async (req, res) => {
+  app.get("/api/analytics/exists", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
       const hasAnalytics = await storage.hasAnalyticsImports(userId);
@@ -193,7 +202,7 @@ export async function registerRoutes(
   });
 
   // GET /api/analytics/:id - Get analytics import (authenticated with user ownership check)
-  app.get("/api/analytics/:id", isAuthenticated, apiLimiter, async (req, res) => {
+  app.get("/api/analytics/:id", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
       const analyticsImport = await storage.getAnalyticsImportForUser(req.params.id as string, userId);
@@ -210,7 +219,7 @@ export async function registerRoutes(
   // ============ Ideas Endpoints ============
 
   // POST /api/ideas/generate - Generate ideas from analytics
-  app.post("/api/ideas/generate", isAuthenticated, apiLimiter, async (req, res) => {
+  app.post("/api/ideas/generate", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
       let { analyticsImportId } = req.body;
@@ -292,7 +301,7 @@ export async function registerRoutes(
   });
 
   // GET /api/ideas - Get all active ideas for user
-  app.get("/api/ideas", isAuthenticated, apiLimiter, async (req, res) => {
+  app.get("/api/ideas", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
       const status = req.query.status as string | undefined;
@@ -331,7 +340,7 @@ export async function registerRoutes(
   });
 
   // GET /api/ideas/:id - Get single idea with checklist
-  app.get("/api/ideas/:id", apiLimiter, async (req, res) => {
+  app.get("/api/ideas/:id", async (req, res) => {
     try {
       const idea = await storage.getIdea(req.params.id as string);
       if (!idea) {
@@ -359,7 +368,7 @@ export async function registerRoutes(
   });
 
   // PATCH /api/ideas/:id - Update idea
-  app.patch("/api/ideas/:id", isAuthenticated, apiLimiter, async (req, res) => {
+  app.patch("/api/ideas/:id", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
       const idea = await storage.getIdea(req.params.id as string);
@@ -378,7 +387,7 @@ export async function registerRoutes(
   });
 
   // DELETE /api/ideas/:id - Delete idea
-  app.delete("/api/ideas/:id", apiLimiter, async (req, res) => {
+  app.delete("/api/ideas/:id", async (req, res) => {
     try {
       const idea = await storage.getIdea(req.params.id as string);
       if (!idea) {
@@ -396,7 +405,7 @@ export async function registerRoutes(
   // ============ Checklist Endpoints ============
 
   // POST /api/ideas/:ideaId/checklist - Add new checklist item
-  app.post("/api/ideas/:ideaId/checklist", apiLimiter, async (req, res) => {
+  app.post("/api/ideas/:ideaId/checklist", async (req, res) => {
     try {
       const idea = await storage.getIdea(req.params.ideaId as string);
       if (!idea) {
@@ -422,7 +431,7 @@ export async function registerRoutes(
   });
 
   // PATCH /api/checklist/:id - Update item text and/or checked state
-  app.patch("/api/checklist/:id", apiLimiter, async (req, res) => {
+  app.patch("/api/checklist/:id", async (req, res) => {
     try {
       const updateData: { text?: string; isChecked?: boolean } = {};
       if (req.body.text !== undefined) {
@@ -443,7 +452,7 @@ export async function registerRoutes(
   });
 
   // PATCH /api/checklist/:id/toggle - Toggle checkbox
-  app.patch("/api/checklist/:id/toggle", isAuthenticated, apiLimiter, async (req, res) => {
+  app.patch("/api/checklist/:id/toggle", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
       const updatedItem = await storage.toggleChecklistItem(req.params.id as string);
@@ -528,7 +537,7 @@ export async function registerRoutes(
   });
 
   // DELETE /api/checklist/:id - Delete item
-  app.delete("/api/checklist/:id", apiLimiter, async (req, res) => {
+  app.delete("/api/checklist/:id", async (req, res) => {
     try {
       await storage.deleteChecklistItem(req.params.id as string);
       res.status(204).send();
@@ -541,7 +550,7 @@ export async function registerRoutes(
   // ============ Progress Endpoints ============
 
   // GET /api/progress - Get user tier progress
-  app.get("/api/progress", isAuthenticated, apiLimiter, async (req, res) => {
+  app.get("/api/progress", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
       const user = await storage.getUser(userId);
@@ -570,7 +579,7 @@ export async function registerRoutes(
   });
 
   // POST /api/ideas/:id/complete - Trigger auto-complete check (idempotent)
-  app.post("/api/ideas/:id/complete", isAuthenticated, apiLimiter, async (req, res) => {
+  app.post("/api/ideas/:id/complete", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
       const idea = await storage.getIdea(req.params.id as string);
@@ -665,7 +674,7 @@ export async function registerRoutes(
   // ============ Notification Endpoints ============
 
   // GET /api/notifications - Get user notifications
-  app.get("/api/notifications", isAuthenticated, apiLimiter, async (req, res) => {
+  app.get("/api/notifications", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
       const unreadOnly = req.query.unread === "true";
@@ -678,7 +687,7 @@ export async function registerRoutes(
   });
 
   // PATCH /api/notifications/:id/read - Mark as read
-  app.patch("/api/notifications/:id/read", apiLimiter, async (req, res) => {
+  app.patch("/api/notifications/:id/read", async (req, res) => {
     try {
       await storage.markNotificationRead(req.params.id as string);
       res.json({ success: true });
@@ -691,7 +700,7 @@ export async function registerRoutes(
   // ============ Admin Endpoints ============
 
   // GET /api/admin/stats - Get admin dashboard statistics
-  app.get("/api/admin/stats", isAuthenticated, isAdmin, apiLimiter, async (req, res) => {
+  app.get("/api/admin/stats", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const stats = await storage.getAdminStats();
       res.json(stats);
@@ -702,7 +711,7 @@ export async function registerRoutes(
   });
 
   // GET /api/admin/users - Get all users
-  app.get("/api/admin/users", isAuthenticated, isAdmin, apiLimiter, async (req, res) => {
+  app.get("/api/admin/users", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const usersList = await storage.getAllUsers();
       res.json(usersList);
@@ -713,7 +722,7 @@ export async function registerRoutes(
   });
 
   // PATCH /api/admin/users/:id/admin - Toggle admin status
-  app.patch("/api/admin/users/:id/admin", isAuthenticated, isAdmin, apiLimiter, async (req, res) => {
+  app.patch("/api/admin/users/:id/admin", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const { isAdmin: makeAdmin } = req.body;
       if (typeof makeAdmin !== "boolean") {
@@ -731,7 +740,7 @@ export async function registerRoutes(
   });
 
   // GET /api/admin/check - Check if current user is admin
-  app.get("/api/admin/check", isAuthenticated, apiLimiter, async (req, res) => {
+  app.get("/api/admin/check", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
       const user = await storage.getUser(userId);
