@@ -16,10 +16,22 @@ import OpenAI from "openai";
 import { generateIdeas, checkDuplicates, type AnalyticsData } from "./services/aiService";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import rateLimit from "express-rate-limit";
 
 function getUserId(req: any): string {
   return req.user?.claims?.sub;
 }
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each user to 100 requests per window
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  message: { error: "Too many requests, please try again later." },
+  keyGenerator: (req) => {
+    return getUserId(req) || req.ip || "unknown";
+  }
+});
 
 // Admin middleware - checks if user is authenticated and is an admin
 async function isAdmin(req: Request, res: Response, next: NextFunction) {
@@ -518,7 +530,7 @@ Return only valid JSON, no markdown.`,
   });
 
   // DELETE /api/checklist/:id - Delete item
-  app.delete("/api/checklist/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/checklist/:id", isAuthenticated, apiLimiter, async (req, res) => {
     try {
       const userId = getUserId(req);
       const itemId = req.params.id;
