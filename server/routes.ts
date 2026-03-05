@@ -523,9 +523,25 @@ Return only valid JSON, no markdown.`,
   });
 
   // DELETE /api/checklist/:id - Delete item
-  app.delete("/api/checklist/:id", async (req, res) => {
+  app.delete("/api/checklist/:id", isAuthenticated, async (req, res) => {
     try {
-      await storage.deleteChecklistItem(req.params.id);
+      const userId = getUserId(req);
+      const itemId = req.params.id;
+      if (typeof itemId !== "string") {
+        return res.status(400).json({ error: "Invalid ID" });
+      }
+
+      const item = await storage.getChecklistItem(itemId);
+      if (!item) {
+        return res.status(404).json({ error: "Checklist item not found" });
+      }
+
+      const idea = await storage.getIdea(item.ideaId);
+      if (!idea || idea.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      await storage.deleteChecklistItem(itemId);
       res.status(204).send();
     } catch (error) {
       console.error("Delete checklist item error:", error);
