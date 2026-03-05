@@ -16,6 +16,7 @@ import OpenAI from "openai";
 import { generateIdeas, checkDuplicates, type AnalyticsData } from "./services/aiService";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import rateLimit from "express-rate-limit";
 
 function getUserId(req: any): string {
   return req.user?.claims?.sub;
@@ -68,6 +69,24 @@ export async function registerRoutes(
   registerObjectStorageRoutes(app);
 
   const objectStorageService = new ObjectStorageService();
+
+  // Rate limiter for modifying endpoints
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    limit: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    message: { error: "Too many requests from this IP, please try again later." }
+  });
+
+  // Apply to specific routes, or app.use('/api', apiLimiter)
+  // CodeQL specifically flagged the DELETE route doing auth. We can use a specific stricter limiter for it,
+  // or apply a general one. Let's create a specific one for delete actions.
+  const deleteLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 50,
+    message: { error: "Too many delete attempts, please try again later." }
+  });
 
   // ============ Analytics Endpoints ============
 
@@ -368,7 +387,7 @@ Return only valid JSON, no markdown.`,
   });
 
   // DELETE /api/ideas/:id - Delete idea
-  app.delete("/api/ideas/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/ideas/:id", isAuthenticated, deleteLimiter, async (req, res) => {
     try {
       const userId = getUserId(req);
       const idea = await storage.getIdea(req.params.id as string);
