@@ -7,6 +7,7 @@ import {
   insertAnalyticsImportSchema,
   insertIdeaSchema,
   insertChecklistItemSchema,
+  type InsertChecklistItem,
   insertNotificationSchema,
   ideas,
   users,
@@ -14,11 +15,12 @@ import {
 import { z } from "zod";
 import OpenAI from "openai";
 import { generateIdeas, checkDuplicates, type AnalyticsData } from "./services/aiService";
-import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
-import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { setupAuth, isAuthenticated } from "./auth";
+import { Storage } from "@google-cloud/storage";
+import { randomUUID } from "crypto";
 
 function getUserId(req: any): string {
-  return req.user?.claims?.sub;
+  return req.user?.id;
 }
 
 // Admin middleware - checks if user is authenticated and is an admin
@@ -37,8 +39,7 @@ async function isAdmin(req: Request, res: Response, next: NextFunction) {
 }
 
 const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 const DEFAULT_CHECKLIST_ITEMS = [
@@ -61,13 +62,89 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   // Setup authentication BEFORE other routes
-  await setupAuth(app);
-  registerAuthRoutes(app);
+  setupAuth(app);
 
-  // Register object storage routes for file uploads
-  registerObjectStorageRoutes(app);
+  const gcsStorage = new Storage({
+    projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+    credentials: {
+      client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
+      private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY?.replace(/\\n/g, '\n')
+    }
+  });
 
-  const objectStorageService = new ObjectStorageService();
+  // ============ File Upload Endpoints ============
+
+  app.post("/api/uploads/request-url", isAuthenticated, async (req, res) => {
+    try {
+      const { name, size, contentType } = req.body;
+
+      if (!name) {
+        return res.status(400).json({ error: "Missing required field: name" });
+      }
+
+      const bucketName = process.env.GOOGLE_CLOUD_BUCKET_NAME || "";
+      const bucket = gcsStorage.bucket(bucketName);
+
+      const objectId = randomUUID();
+      const objectName = `uploads/${objectId}`;
+      const file = bucket.file(objectName);
+
+      const [uploadURL] = await file.getSignedUrl({
+        version: 'v4',
+        action: 'write',
+        expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+        contentType: contentType || 'application/octet-stream',
+      });
+
+      const objectPath = `/objects/${objectName}`;
+
+      res.json({
+        uploadURL,
+        objectPath,
+        metadata: { name, size, contentType },
+      });
+    } catch (error) {
+      console.error("Error generating upload URL:", error);
+      res.status(500).json({ error: "Failed to generate upload URL" });
+    }
+  });
+
+  app.get(/^\/objects\/(.+)$/, isAuthenticated, async (req, res) => {
+    try {
+      const objectName = req.params[0];
+      const bucketName = process.env.GOOGLE_CLOUD_BUCKET_NAME || "";
+      const bucket = gcsStorage.bucket(bucketName);
+      const file = bucket.file(objectName);
+
+      const [exists] = await file.exists();
+      if (!exists) {
+        return res.status(404).json({ error: "Object not found" });
+      }
+
+      const [metadata] = await file.getMetadata();
+      const isPublic = false; // Could check ACL here if needed
+
+      res.set({
+        "Content-Type": metadata.contentType || "application/octet-stream",
+        "Content-Length": metadata.size,
+        "Cache-Control": `${isPublic ? "public" : "private"}, max-age=3600`,
+      });
+
+      const stream = file.createReadStream();
+
+      stream.on("error", (err) => {
+        console.error("Stream error:", err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: "Error streaming file" });
+        }
+      });
+
+      stream.pipe(res);
+    } catch (error) {
+      console.error("Error serving object:", error);
+      return res.status(500).json({ error: "Failed to serve object" });
+    }
+  });
 
   // ============ Analytics Endpoints ============
 
@@ -81,11 +158,19 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Object path is required. Upload image first via /api/uploads/request-url" });
       }
 
-      // Get the image from object storage
-      const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
-      const [imageBuffer] = await objectFile.download();
+      // Get the image from Google Cloud Storage
+      const bucketName = process.env.GOOGLE_CLOUD_BUCKET_NAME || "";
+      const bucket = gcsStorage.bucket(bucketName);
+      const file = bucket.file(objectPath.replace(/^\/objects\//, ''));
+
+      const [exists] = await file.exists();
+      if (!exists) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+
+      const [imageBuffer] = await file.download();
       const imageBase64 = imageBuffer.toString("base64");
-      const [metadata] = await objectFile.getMetadata();
+      const [metadata] = await file.getMetadata();
       const contentType = metadata.contentType || "image/png";
 
       const response = await openai.chat.completions.create({
@@ -241,36 +326,44 @@ Return only valid JSON, no markdown.`,
       
       const uniqueIdeas = checkDuplicates(generatedIdeas, previousTitles);
 
-      const createdIdeas = await Promise.all(
-        uniqueIdeas.map(async (idea, index) => {
-          const newIdea = await storage.createIdea({
-            userId,
-            analyticsImportId: analyticsImportId || null,
-            title: idea.title,
-            rationale: idea.rationale,
-            status: "unstarted",
-            position: index,
+      // Batch insert ideas
+      const ideasData = uniqueIdeas.map((idea, index) => ({
+        userId,
+        analyticsImportId: analyticsImportId || null,
+        title: idea.title,
+        rationale: idea.rationale,
+        status: "unstarted",
+        position: index,
+      }));
+
+      const createdIdeas = await storage.createIdeas(ideasData);
+
+      // Create a map of position -> idea to efficiently associate checklist items
+      const ideasByPosition = new Map(createdIdeas.map((i) => [i.position, i]));
+
+      const allChecklistItems: InsertChecklistItem[] = [];
+
+      uniqueIdeas.forEach((idea, index) => {
+        const newIdea = ideasByPosition.get(index);
+        if (!newIdea) return;
+
+        const checklistItems = idea.checklist.length === 4
+          ? idea.checklist
+          : DEFAULT_CHECKLIST_ITEMS;
+
+        checklistItems.forEach((text, pos) => {
+          allChecklistItems.push({
+            ideaId: newIdea.id,
+            text,
+            isChecked: false,
+            isDefault: true,
+            position: pos,
           });
+        });
+      });
 
-          const checklistItems = idea.checklist.length === 4 
-            ? idea.checklist 
-            : DEFAULT_CHECKLIST_ITEMS;
-
-          await Promise.all(
-            checklistItems.map((text, pos) =>
-              storage.createChecklistItem({
-                ideaId: newIdea.id,
-                text,
-                isChecked: false,
-                isDefault: true,
-                position: pos,
-              })
-            )
-          );
-
-          return newIdea;
-        })
-      );
+      // Batch insert checklist items
+      await storage.createChecklistItems(allChecklistItems);
 
       await storage.updateUserActivity(userId);
 
@@ -352,12 +445,17 @@ Return only valid JSON, no markdown.`,
   app.patch("/api/ideas/:id", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const idea = await storage.getIdea(req.params.id);
+      const ideaId = req.params.id as string;
+      const idea = await storage.getIdea(ideaId);
       if (!idea) {
         return res.status(404).json({ error: "Idea not found" });
       }
 
-      const updatedIdea = await storage.updateIdea(req.params.id, req.body);
+      if (idea.userId !== userId) {
+        return res.status(404).json({ error: "Idea not found" });
+      }
+
+      const updatedIdea = await storage.updateIdea(ideaId, req.body);
       await storage.updateUserActivity(userId);
 
       res.json(updatedIdea);
@@ -386,11 +484,16 @@ Return only valid JSON, no markdown.`,
   // ============ Checklist Endpoints ============
 
   // POST /api/ideas/:ideaId/checklist - Add new checklist item
-  app.post("/api/ideas/:ideaId/checklist", async (req, res) => {
+  app.post("/api/ideas/:ideaId/checklist", isAuthenticated, async (req, res) => {
     try {
+      const userId = getUserId(req);
       const idea = await storage.getIdea(req.params.ideaId);
       if (!idea) {
         return res.status(404).json({ error: "Idea not found" });
+      }
+
+      if (idea.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized" });
       }
 
       const existingItems = await storage.getChecklistItems(req.params.ideaId);
@@ -436,7 +539,7 @@ Return only valid JSON, no markdown.`,
   app.patch("/api/checklist/:id/toggle", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const updatedItem = await storage.toggleChecklistItem(req.params.id);
+      const updatedItem = await storage.toggleChecklistItem(req.params.id as string, userId);
       if (!updatedItem) {
         return res.status(404).json({ error: "Checklist item not found" });
       }
@@ -668,9 +771,15 @@ Return only valid JSON, no markdown.`,
   });
 
   // PATCH /api/notifications/:id/read - Mark as read
-  app.patch("/api/notifications/:id/read", async (req, res) => {
+  app.patch("/api/notifications/:id/read", isAuthenticated, async (req, res) => {
     try {
-      await storage.markNotificationRead(req.params.id);
+      const userId = getUserId(req);
+      const notification = await storage.markNotificationRead(req.params.id, userId);
+
+      if (!notification) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+
       res.json({ success: true });
     } catch (error) {
       console.error("Mark notification read error:", error);

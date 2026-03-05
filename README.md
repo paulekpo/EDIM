@@ -62,9 +62,8 @@ Preferred communication style: Simple, everyday language.
 
 ### AI Integration
 - OpenAI API for idea generation and duplicate detection
-- Configured via environment variables: `AI_INTEGRATIONS_OPENAI_API_KEY`, `AI_INTEGRATIONS_OPENAI_BASE_URL`
+- Configured via environment variables: `OPENAI_API_KEY`
 - AI service located in `server/services/aiService.ts`
-- Supports voice chat, image generation, and batch processing
 
 ## External Dependencies
 

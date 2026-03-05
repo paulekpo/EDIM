@@ -1,8 +1,8 @@
 import OpenAI from "openai";
+import { normalizedSimilarity } from "../utils";
 
 const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 export interface GeneratedIdea {
@@ -16,42 +16,6 @@ export interface AnalyticsData {
   searchQueries: string[];
 }
 
-function levenshteinDistance(a: string, b: string): number {
-  const matrix: number[][] = [];
-
-  for (let i = 0; i <= b.length; i++) {
-    matrix[i] = [i];
-  }
-
-  for (let j = 0; j <= a.length; j++) {
-    matrix[0][j] = j;
-  }
-
-  for (let i = 1; i <= b.length; i++) {
-    for (let j = 1; j <= a.length; j++) {
-      if (b.charAt(i - 1) === a.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1];
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j] + 1
-        );
-      }
-    }
-  }
-
-  return matrix[b.length][a.length];
-}
-
-function normalizedSimilarity(a: string, b: string): number {
-  const aLower = a.toLowerCase().trim();
-  const bLower = b.toLowerCase().trim();
-  const maxLen = Math.max(aLower.length, bLower.length);
-  if (maxLen === 0) return 1;
-  const distance = levenshteinDistance(aLower, bLower);
-  return (maxLen - distance) / maxLen;
-}
 
 export function checkDuplicates(
   newIdeas: GeneratedIdea[],
@@ -235,7 +199,7 @@ Return ONLY a valid JSON object with this structure:
 
   const response = await retryWithBackoff(async () => {
     const completion = await openai.chat.completions.create({
-      model: "gpt-5.1",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
@@ -282,7 +246,7 @@ export async function analyzeScreenshot(
 
   const response = await retryWithBackoff(async () => {
     const completion = await openai.chat.completions.create({
-      model: "gpt-5.1",
+      model: "gpt-4o",
       messages: [
         {
           role: "user",
