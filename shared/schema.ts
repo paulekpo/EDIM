@@ -45,6 +45,13 @@ export const insertIdeaSchema = createInsertSchema(ideas).omit({
   createdAt: true,
 });
 
+export const patchIdeaSchema = insertIdeaSchema.pick({
+  title: true,
+  rationale: true,
+  status: true,
+  position: true,
+}).partial();
+
 export type InsertIdea = z.infer<typeof insertIdeaSchema>;
 export type Idea = typeof ideas.$inferSelect;
 
