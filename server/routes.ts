@@ -1,15 +1,8 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { db } from "./db";
-import { sql } from "drizzle-orm";
 import {
   insertAnalyticsImportSchema,
-  insertIdeaSchema,
-  insertChecklistItemSchema,
-  insertNotificationSchema,
-  ideas,
-  users,
 } from "@shared/schema";
 import { z } from "zod";
 import OpenAI from "openai";
