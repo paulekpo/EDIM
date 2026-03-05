@@ -5,8 +5,8 @@
 EDIM (Entertainment Data to Idea Management) is a gamified content creation assistant MVP designed specifically for TikTok creators. The application features an Ideas Wheel for random idea selection, an Achievement Wheel for tracking tier progression, and automatic project completion when all checklist items are checked. TikTok is the only platform that shows both traffic sources and search queries together in analytics screenshots, making it ideal for AI-powered idea generation. The system supports multiple users with individual accounts - each user has their own unique wheel, ideas, TikTok analytics, and progress tracking.
 
 ### Authentication
-- **Provider**: Replit Auth via OpenID Connect (OIDC)
-- **Features**: Supports Google, GitHub, Apple, email/password login
+- **Provider**: Standard Authentication (Passport.js)
+- **Features**: Supports Google OAuth, GitHub, Apple, email/password login
 - **Session Storage**: PostgreSQL with connect-pg-simple
 - **User Data**: Each user has separate ideas, analytics imports, and tier progress
 
@@ -64,7 +64,7 @@ Preferred communication style: Simple, everyday language.
 - OpenAI API for idea generation and duplicate detection
 - Configured via environment variables: `AI_INTEGRATIONS_OPENAI_API_KEY`, `AI_INTEGRATIONS_OPENAI_BASE_URL`
 - AI service located in `server/services/aiService.ts`
-- Supports voice chat, image generation, and batch processing through replit integrations
+- Supports voice chat, image generation, and batch processing
 
 ## External Dependencies
 
@@ -74,7 +74,7 @@ Preferred communication style: Simple, everyday language.
 - Uses `connect-pg-simple` for session storage
 
 ### AI Services
-- OpenAI API (or compatible endpoint via Replit AI Integrations)
+- OpenAI API (or compatible endpoint)
 - Used for: idea generation, duplicate detection, analytics screenshot parsing
 - Voice/audio processing capabilities available
 
