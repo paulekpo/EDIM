@@ -7,6 +7,7 @@ import {
   insertAnalyticsImportSchema,
   insertIdeaSchema,
   insertChecklistItemSchema,
+  type InsertChecklistItem,
   insertNotificationSchema,
   ideas,
   users,
@@ -241,36 +242,44 @@ Return only valid JSON, no markdown.`,
       
       const uniqueIdeas = checkDuplicates(generatedIdeas, previousTitles);
 
-      const createdIdeas = await Promise.all(
-        uniqueIdeas.map(async (idea, index) => {
-          const newIdea = await storage.createIdea({
-            userId,
-            analyticsImportId: analyticsImportId || null,
-            title: idea.title,
-            rationale: idea.rationale,
-            status: "unstarted",
-            position: index,
+      // Batch insert ideas
+      const ideasData = uniqueIdeas.map((idea, index) => ({
+        userId,
+        analyticsImportId: analyticsImportId || null,
+        title: idea.title,
+        rationale: idea.rationale,
+        status: "unstarted",
+        position: index,
+      }));
+
+      const createdIdeas = await storage.createIdeas(ideasData);
+
+      // Create a map of position -> idea to efficiently associate checklist items
+      const ideasByPosition = new Map(createdIdeas.map((i) => [i.position, i]));
+
+      const allChecklistItems: InsertChecklistItem[] = [];
+
+      uniqueIdeas.forEach((idea, index) => {
+        const newIdea = ideasByPosition.get(index);
+        if (!newIdea) return;
+
+        const checklistItems = idea.checklist.length === 4
+          ? idea.checklist
+          : DEFAULT_CHECKLIST_ITEMS;
+
+        checklistItems.forEach((text, pos) => {
+          allChecklistItems.push({
+            ideaId: newIdea.id,
+            text,
+            isChecked: false,
+            isDefault: true,
+            position: pos,
           });
+        });
+      });
 
-          const checklistItems = idea.checklist.length === 4 
-            ? idea.checklist 
-            : DEFAULT_CHECKLIST_ITEMS;
-
-          await Promise.all(
-            checklistItems.map((text, pos) =>
-              storage.createChecklistItem({
-                ideaId: newIdea.id,
-                text,
-                isChecked: false,
-                isDefault: true,
-                position: pos,
-              })
-            )
-          );
-
-          return newIdea;
-        })
-      );
+      // Batch insert checklist items
+      await storage.createChecklistItems(allChecklistItems);
 
       await storage.updateUserActivity(userId);
 
