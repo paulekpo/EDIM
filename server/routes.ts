@@ -16,6 +16,7 @@ import OpenAI from "openai";
 import { generateIdeas, checkDuplicates, type AnalyticsData } from "./services/aiService";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import rateLimit from "express-rate-limit";
 
 function getUserId(req: any): string {
   return req.user?.claims?.sub;
@@ -55,6 +56,13 @@ const TIER_THRESHOLDS: Record<string, number> = {
 };
 
 const TIER_ORDER = ["amateur", "professional", "expert"];
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
 
 export async function registerRoutes(
   httpServer: Server,
@@ -386,7 +394,7 @@ Return only valid JSON, no markdown.`,
   // ============ Checklist Endpoints ============
 
   // POST /api/ideas/:ideaId/checklist - Add new checklist item
-  app.post("/api/ideas/:ideaId/checklist", isAuthenticated, async (req, res) => {
+  app.post("/api/ideas/:ideaId/checklist", apiLimiter, isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
       const idea = await storage.getIdea(req.params.ideaId as string);
@@ -417,7 +425,7 @@ Return only valid JSON, no markdown.`,
   });
 
   // PATCH /api/checklist/:id - Update item text and/or checked state
-  app.patch("/api/checklist/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/checklist/:id", apiLimiter, isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
       const item = await storage.getChecklistItem(req.params.id as string);
@@ -449,7 +457,7 @@ Return only valid JSON, no markdown.`,
   });
 
   // PATCH /api/checklist/:id/toggle - Toggle checkbox
-  app.patch("/api/checklist/:id/toggle", isAuthenticated, async (req, res) => {
+  app.patch("/api/checklist/:id/toggle", apiLimiter, isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
       const item = await storage.getChecklistItem(req.params.id as string);
@@ -544,7 +552,7 @@ Return only valid JSON, no markdown.`,
   });
 
   // DELETE /api/checklist/:id - Delete item
-  app.delete("/api/checklist/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/checklist/:id", apiLimiter, isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
       const item = await storage.getChecklistItem(req.params.id as string);
