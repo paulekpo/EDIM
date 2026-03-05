@@ -436,7 +436,7 @@ Return only valid JSON, no markdown.`,
   app.patch("/api/checklist/:id/toggle", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const updatedItem = await storage.toggleChecklistItem(req.params.id);
+      const updatedItem = await storage.toggleChecklistItem(req.params.id as string, userId);
       if (!updatedItem) {
         return res.status(404).json({ error: "Checklist item not found" });
       }

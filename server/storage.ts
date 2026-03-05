@@ -46,7 +46,7 @@ export interface IStorage {
   createChecklistItem(data: InsertChecklistItem): Promise<ChecklistItem>;
   getChecklistItems(ideaId: string): Promise<ChecklistItem[]>;
   updateChecklistItem(id: string, data: Partial<ChecklistItem>): Promise<ChecklistItem | undefined>;
-  toggleChecklistItem(id: string): Promise<ChecklistItem | undefined>;
+  toggleChecklistItem(id: string, userId: string): Promise<ChecklistItem | undefined>;
   deleteChecklistItem(id: string): Promise<void>;
   countUncheckedItems(ideaId: string): Promise<number>;
 
@@ -225,13 +225,23 @@ export class DatabaseStorage implements IStorage {
     return updatedItem;
   }
 
-  async toggleChecklistItem(id: string): Promise<ChecklistItem | undefined> {
+  async toggleChecklistItem(id: string, userId: string): Promise<ChecklistItem | undefined> {
     const [currentItem] = await db
       .select()
       .from(checklistItems)
       .where(eq(checklistItems.id, id));
 
     if (!currentItem) return undefined;
+
+    // Verify ownership
+    const [idea] = await db
+      .select()
+      .from(ideas)
+      .where(eq(ideas.id, currentItem.ideaId));
+
+    if (!idea || idea.userId !== userId) {
+      return undefined;
+    }
 
     const newIsChecked = !currentItem.isChecked;
     const [updatedItem] = await db
