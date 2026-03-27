@@ -299,28 +299,34 @@ Return only valid JSON, no markdown.`,
         ? await storage.getIdeasByUser(userId, status)
         : await storage.getActiveIdeas(userId);
 
-      const ideasWithChecklist = await Promise.all(
-        activeIdeas.map(async (idea) => {
-          const checklistItems = await storage.getChecklistItems(idea.id);
-          let analyticsData = null;
-          
-          if (idea.analyticsImportId) {
-            const analyticsImport = await storage.getAnalyticsImport(idea.analyticsImportId);
-            if (analyticsImport) {
-              analyticsData = {
-                searchQueries: analyticsImport.searchQueries || [],
-                trafficSources: analyticsImport.trafficSources || {},
-              };
-            }
-          }
-          
-          return {
-            ...idea,
-            checklistItems,
-            analyticsData,
+      const ideaIds = activeIdeas.map((i) => i.id);
+      const analyticsImportIds = activeIdeas
+        .map((i) => i.analyticsImportId)
+        .filter((id): id is string => id != null);
+
+      const [checklistsMap, analyticsMap] = await Promise.all([
+        storage.getChecklistItemsForIdeas(ideaIds),
+        storage.getAnalyticsImports(analyticsImportIds),
+      ]);
+
+      const ideasWithChecklist = activeIdeas.map((idea) => {
+        const checklistItems = checklistsMap.get(idea.id) || [];
+        let analyticsData = null;
+
+        if (idea.analyticsImportId && analyticsMap.has(idea.analyticsImportId)) {
+          const analyticsImport = analyticsMap.get(idea.analyticsImportId)!;
+          analyticsData = {
+            searchQueries: analyticsImport.searchQueries || [],
+            trafficSources: analyticsImport.trafficSources || {},
           };
-        })
-      );
+        }
+
+        return {
+          ...idea,
+          checklistItems,
+          analyticsData,
+        };
+      });
 
       res.json(ideasWithChecklist);
     } catch (error) {
