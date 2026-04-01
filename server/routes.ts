@@ -17,6 +17,7 @@ import OpenAI from "openai";
 import { generateIdeas, checkDuplicates, type AnalyticsData } from "./services/aiService";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import rateLimit from "express-rate-limit";
 
 function getUserId(req: any): string {
   return req.user?.claims?.sub;
@@ -56,6 +57,15 @@ const TIER_THRESHOLDS: Record<string, number> = {
 };
 
 const TIER_ORDER = ["amateur", "professional", "expert"];
+
+// Rate limiter for idea access
+const ideaRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: "Too many requests from this IP, please try again later",
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
 
 export async function registerRoutes(
   httpServer: Server,
@@ -330,10 +340,15 @@ Return only valid JSON, no markdown.`,
   });
 
   // GET /api/ideas/:id - Get single idea with checklist
-  app.get("/api/ideas/:id", async (req, res) => {
+  app.get("/api/ideas/:id", ideaRateLimiter, isAuthenticated, async (req, res) => {
     try {
-      const idea = await storage.getIdea(req.params.id);
+      const userId = getUserId(req);
+      const idea = await storage.getIdea(req.params.id as string);
       if (!idea) {
+        return res.status(404).json({ error: "Idea not found" });
+      }
+
+      if (idea.userId !== userId) {
         return res.status(404).json({ error: "Idea not found" });
       }
 
